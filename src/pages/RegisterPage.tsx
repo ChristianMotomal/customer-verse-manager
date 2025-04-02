@@ -18,6 +18,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 const registerSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
@@ -35,6 +37,7 @@ const RegisterPage = () => {
   const { register } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -48,11 +51,14 @@ const RegisterPage = () => {
 
   const onSubmit = async (data: RegisterFormValues) => {
     setIsLoading(true);
+    setError(null);
+    
     try {
       await register(data.email, data.password, data.name);
       navigate("/");
-    } catch (error) {
-      // Error is handled in the auth context
+    } catch (error: any) {
+      // Error is handled in the auth context, but we can show it here too
+      setError(error.message || "Failed to create account");
     } finally {
       setIsLoading(false);
     }
@@ -72,6 +78,13 @@ const RegisterPage = () => {
             <CardDescription>Create a new account to get started</CardDescription>
           </CardHeader>
           <CardContent>
+            {error && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
@@ -152,6 +165,10 @@ const RegisterPage = () => {
             </p>
           </CardFooter>
         </Card>
+        
+        <div className="mt-6 text-center text-sm text-muted-foreground">
+          <p>After registration, you may need to verify your email depending on your Supabase settings.</p>
+        </div>
       </div>
     </div>
   );

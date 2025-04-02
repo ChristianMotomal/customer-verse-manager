@@ -18,6 +18,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
@@ -30,6 +32,7 @@ const LoginPage = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -41,11 +44,14 @@ const LoginPage = () => {
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
+    setError(null);
+    
     try {
       await login(data.email, data.password);
       navigate("/");
-    } catch (error) {
-      // Error is handled in the auth context
+    } catch (error: any) {
+      // Error is handled in the auth context, but we can show it here too
+      setError(error.message || "Failed to log in");
     } finally {
       setIsLoading(false);
     }
@@ -65,6 +71,13 @@ const LoginPage = () => {
             <CardDescription>Enter your credentials to access your account</CardDescription>
           </CardHeader>
           <CardContent>
+            {error && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
@@ -119,22 +132,6 @@ const LoginPage = () => {
             </p>
           </CardFooter>
         </Card>
-
-        <div className="mt-6 text-center">
-          <p className="text-sm text-muted-foreground">
-            Demo accounts:
-          </p>
-          <div className="grid grid-cols-2 gap-4 mt-2">
-            <div className="text-xs text-left p-2 bg-gray-100 rounded">
-              <p><strong>Admin:</strong> admin@example.com</p>
-              <p><strong>Password:</strong> admin123</p>
-            </div>
-            <div className="text-xs text-left p-2 bg-gray-100 rounded">
-              <p><strong>User:</strong> user@example.com</p>
-              <p><strong>Password:</strong> user123</p>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

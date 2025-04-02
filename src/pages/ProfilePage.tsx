@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import { supabase } from "@/integrations/supabase/client";
 
 const profileSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
@@ -28,26 +29,51 @@ const profileSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
 const ProfilePage = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      name: user?.name || "",
-      email: user?.email || "",
+      name: "",
+      email: "",
     },
   });
+
+  useEffect(() => {
+    // Update form when profile data is loaded
+    if (profile) {
+      form.reset({
+        name: profile.name || "",
+        email: profile.email || "",
+      });
+    }
+  }, [profile, form]);
 
   const onSubmit = async (data: ProfileFormValues) => {
     setIsLoading(true);
     
-    // In a real app, this would update the user profile via an API call
-    // For now, we'll just simulate a delay and show a success message
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    toast.success("Profile updated successfully");
-    setIsLoading(false);
+    try {
+      if (!user) {
+        throw new Error("You must be logged in to update your profile");
+      }
+      
+      // Update profile in Supabase
+      const { error } = await supabase
+        .from('profiles')
+        .update({ name: data.name })
+        .eq('id', user.id);
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast.success("Profile updated successfully");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update profile");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -68,10 +94,10 @@ const ProfilePage = () => {
             </CardHeader>
             <CardContent>
               <div className="flex items-center space-x-4 mb-6">
-                {user?.avatar ? (
+                {profile?.avatar_url ? (
                   <img
-                    src={user.avatar}
-                    alt={user.name}
+                    src={profile.avatar_url}
+                    alt={profile.name}
                     className="h-20 w-20 rounded-full border"
                   />
                 ) : (
@@ -80,10 +106,10 @@ const ProfilePage = () => {
                   </div>
                 )}
                 <div>
-                  <h3 className="font-medium text-lg">{user?.name}</h3>
-                  <p className="text-sm text-muted-foreground">{user?.email}</p>
+                  <h3 className="font-medium text-lg">{profile?.name}</h3>
+                  <p className="text-sm text-muted-foreground">{profile?.email}</p>
                   <p className="text-sm">
-                    Role: <span className="font-medium capitalize">{user?.role}</span>
+                    Role: <span className="font-medium capitalize">{profile?.role}</span>
                   </p>
                 </div>
               </div>
