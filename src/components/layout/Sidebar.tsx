@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 
 const Sidebar = () => {
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user, profile, logout } = useAuth();
 
   const navigationItems = [
     {
@@ -58,22 +58,22 @@ const Sidebar = () => {
 
       <div className="px-4 py-6 border-t border-gray-200">
         <div className="flex items-center mb-4">
-          {user?.avatar ? (
+          {profile?.avatar_url ? (
             <img 
-              src={user.avatar} 
-              alt={user.name}
+              src={profile.avatar_url} 
+              alt={profile?.name || ''}
               className="h-8 w-8 rounded-full" 
             />
           ) : (
             <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
               <span className="text-primary font-medium text-sm">
-                {user?.name?.charAt(0) || "U"}
+                {profile?.name?.charAt(0) || "U"}
               </span>
             </div>
           )}
           <div className="ml-3">
-            <p className="text-sm font-medium">{user?.name}</p>
-            <p className="text-xs text-muted-foreground">{user?.email}</p>
+            <p className="text-sm font-medium">{profile?.name || 'User'}</p>
+            <p className="text-xs text-muted-foreground">{profile?.email || user?.email}</p>
           </div>
         </div>
         

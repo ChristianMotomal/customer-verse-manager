@@ -97,7 +97,7 @@ const ProfilePage = () => {
                 {profile?.avatar_url ? (
                   <img
                     src={profile.avatar_url}
-                    alt={profile.name}
+                    alt={profile.name || ""}
                     className="h-20 w-20 rounded-full border"
                   />
                 ) : (

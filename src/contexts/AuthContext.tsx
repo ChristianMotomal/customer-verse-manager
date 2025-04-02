@@ -6,10 +6,10 @@ import { User, Session } from "@supabase/supabase-js";
 
 interface Profile {
   id: string;
-  email: string;
-  name: string;
-  role: "admin" | "user";
-  avatar_url?: string;
+  email: string | null;
+  name: string | null;
+  role: "admin" | "user" | null;
+  avatar_url: string | null;
 }
 
 interface AuthContextType {
@@ -34,6 +34,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Fetch user profile data
   const fetchProfile = async (userId: string) => {
     try {
+      // Using a type assertion to handle the profiles table that's not in the generated types
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -45,7 +46,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return null;
       }
       
-      return data as Profile;
+      return data as unknown as Profile;
     } catch (error) {
       console.error('Error fetching profile:', error);
       return null;
