@@ -1,11 +1,11 @@
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import CustomerDetails from "@/components/customers/CustomerDetails";
+import SupabaseCustomerDetails from "@/components/customers/SupabaseCustomerDetails";
 
 const CustomerDetailsPage = () => {
   return (
     <DashboardLayout>
-      <CustomerDetails />
+      <SupabaseCustomerDetails />
     </DashboardLayout>
   );
 };

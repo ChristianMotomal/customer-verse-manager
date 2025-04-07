@@ -1,6 +1,6 @@
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import PaymentsTable from "@/components/payments/PaymentsTable";
+import SupabasePaymentsTable from "@/components/payments/SupabasePaymentsTable";
 
 const PaymentsPage = () => {
   return (
@@ -11,7 +11,7 @@ const PaymentsPage = () => {
           Track all payment transactions and their statuses.
         </p>
       </div>
-      <PaymentsTable />
+      <SupabasePaymentsTable />
     </DashboardLayout>
   );
 };

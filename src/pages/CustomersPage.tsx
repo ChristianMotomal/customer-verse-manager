@@ -1,6 +1,6 @@
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import CustomersTable from "@/components/customers/CustomersTable";
+import SupabaseCustomersTable from "@/components/customers/SupabaseCustomersTable";
 
 const CustomersPage = () => {
   return (
@@ -11,7 +11,7 @@ const CustomersPage = () => {
           Manage your customer information and view customer details.
         </p>
       </div>
-      <CustomersTable />
+      <SupabaseCustomersTable />
     </DashboardLayout>
   );
 };
