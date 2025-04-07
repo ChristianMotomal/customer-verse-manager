@@ -35,8 +35,14 @@ interface PaymentData {
   amount: number | null;
 }
 
-const SupabaseCustomerDetails = () => {
-  const { customerId = "" } = useParams<{ customerId: string }>();
+interface SupabaseCustomerDetailsProps {
+  customerId?: string;
+}
+
+const SupabaseCustomerDetails = ({ customerId: propCustomerId }: SupabaseCustomerDetailsProps) => {
+  const { customerId: paramCustomerId } = useParams<{ customerId: string }>();
+  // Use the prop if provided, otherwise use the URL param
+  const customerId = propCustomerId || paramCustomerId || "";
   const [customer, setCustomer] = useState<CustomerData | null>(null);
   const [customerPayments, setCustomerPayments] = useState<PaymentData[]>([]);
   const [isLoading, setIsLoading] = useState(true);

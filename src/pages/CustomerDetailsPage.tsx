@@ -4,7 +4,7 @@ import SupabaseCustomerDetails from "@/components/customers/SupabaseCustomerDeta
 import { useParams } from "react-router-dom";
 
 const CustomerDetailsPage = () => {
-  const { customerId } = useParams();
+  const { customerId } = useParams<{ customerId: string }>();
   
   return (
     <DashboardLayout>
@@ -14,7 +14,7 @@ const CustomerDetailsPage = () => {
           View detailed information about this customer.
         </p>
       </div>
-      <SupabaseCustomerDetails customerId={customerId} />
+      <SupabaseCustomerDetails />
     </DashboardLayout>
   );
 };
