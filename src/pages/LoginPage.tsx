@@ -4,7 +4,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { LogIn } from "lucide-react";
+import { LogIn, Mail, KeyRound } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -87,7 +87,10 @@ const LoginPage = () => {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input placeholder="name@example.com" {...field} />
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input className="pl-10" placeholder="name@example.com" {...field} />
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -98,9 +101,17 @@ const LoginPage = () => {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Password</FormLabel>
+                      <div className="flex items-center justify-between">
+                        <FormLabel>Password</FormLabel>
+                        <Link to="/reset-password" className="text-sm text-primary hover:underline">
+                          Forgot password?
+                        </Link>
+                      </div>
                       <FormControl>
-                        <Input type="password" placeholder="••••••" {...field} />
+                        <div className="relative">
+                          <KeyRound className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input className="pl-10" type="password" placeholder="••••••" {...field} />
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
