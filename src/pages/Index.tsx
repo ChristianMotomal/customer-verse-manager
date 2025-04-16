@@ -2,7 +2,6 @@
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import StatsCards from "@/components/dashboard/StatsCards";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getRecentPayments, customers } from "@/utils/data";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, PlusCircle } from "lucide-react";
@@ -15,27 +14,89 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState } from "react";
+import { useToast } from "@/components/ui/use-toast";
+
+interface CustomerData {
+  custno: string;
+  custname: string | null;
+  totalSpent?: number;
+}
+
+interface PaymentData {
+  orno: string;
+  transno: string | null;
+  paydate: string | null;
+  amount: number | null;
+  customer?: {
+    custno: string;
+    custname: string | null;
+  };
+}
 
 const Dashboard = () => {
-  const recentPayments = getRecentPayments(5);
+  const [recentCustomers, setRecentCustomers] = useState<CustomerData[]>([]);
+  const [recentPayments, setRecentPayments] = useState<PaymentData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
-  // Get customer names for payments
-  const getCustomerName = (customerId: string) => {
-    const customer = customers.find((c) => c.id === customerId);
-    return customer ? customer.name : "Unknown Customer";
-  };
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        // Fetch recent customers
+        const { data: customersData, error: customersError } = await supabase
+          .from('customer')
+          .select('*')
+          .order('custno', { ascending: false })
+          .limit(3);
 
-  const getStatusBadgeColor = (status: string) => {
-    switch (status) {
-      case "successful":
-        return "bg-green-100 text-green-800";
-      case "pending":
-        return "bg-amber-100 text-amber-800";
-      case "failed":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
+        if (customersError) throw customersError;
+
+        // Fetch recent payments with customer details
+        const { data: paymentsData, error: paymentsError } = await supabase
+          .from('payment')
+          .select(`
+            *,
+            sales (
+              custno,
+              customer:customer (
+                custno,
+                custname
+              )
+            )
+          `)
+          .order('paydate', { ascending: false })
+          .limit(5);
+
+        if (paymentsError) throw paymentsError;
+
+        // Process payments data to flatten structure
+        const processedPayments = paymentsData.map(payment => ({
+          ...payment,
+          customer: payment.sales?.customer || null
+        }));
+
+        setRecentCustomers(customersData || []);
+        setRecentPayments(processedPayments || []);
+      } catch (error: any) {
+        console.error('Error fetching dashboard data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load dashboard data. " + error.message,
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [toast]);
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return "N/A";
+    return new Date(dateStr).toLocaleDateString();
   };
 
   return (
@@ -63,43 +124,53 @@ const Dashboard = () => {
             </Button>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentPayments.map((payment) => (
-                  <TableRow key={payment.id}>
-                    <TableCell>
-                      <Link
-                        to={`/customers/${payment.customerId}`}
-                        className="font-medium hover:underline text-primary"
-                      >
-                        {getCustomerName(payment.customerId)}
-                      </Link>
-                    </TableCell>
-                    <TableCell>{payment.description}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={getStatusBadgeColor(payment.status)}
-                      >
-                        {payment.status.charAt(0).toUpperCase() +
-                          payment.status.slice(1)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      ${payment.amount.toLocaleString()}
-                    </TableCell>
+            {isLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>OR Number</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {recentPayments.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center h-24">
+                        No payments found.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    recentPayments.map((payment) => (
+                      <TableRow key={payment.orno}>
+                        <TableCell>
+                          {payment.customer ? (
+                            <Link
+                              to={`/customers/${payment.customer.custno}`}
+                              className="font-medium hover:underline text-primary"
+                            >
+                              {payment.customer.custname || payment.customer.custno}
+                            </Link>
+                          ) : (
+                            "N/A"
+                          )}
+                        </TableCell>
+                        <TableCell>{payment.orno}</TableCell>
+                        <TableCell>{formatDate(payment.paydate)}</TableCell>
+                        <TableCell className="text-right font-medium">
+                          ${payment.amount?.toLocaleString() || "0.00"}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
 
@@ -109,47 +180,37 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent className="space-y-6">
             <div>
-              <p className="text-sm text-muted-foreground mb-1">Top Customers</p>
+              <p className="text-sm text-muted-foreground mb-1">Recent Customers</p>
               <div className="space-y-2">
-                {customers
-                  .sort((a, b) => b.totalSpent - a.totalSpent)
-                  .slice(0, 3)
-                  .map((customer) => (
+                {isLoading ? (
+                  <div className="flex justify-center py-4">
+                    <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary"></div>
+                  </div>
+                ) : recentCustomers.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No customers found.</p>
+                ) : (
+                  recentCustomers.map((customer) => (
                     <div
-                      key={customer.id}
+                      key={customer.custno}
                       className="flex justify-between items-center"
                     >
                       <Link
-                        to={`/customers/${customer.id}`}
+                        to={`/customers/${customer.custno}`}
                         className="hover:underline text-primary"
                       >
-                        {customer.name}
+                        {customer.custname || customer.custno}
                       </Link>
-                      <span className="font-medium">
-                        ${customer.totalSpent.toLocaleString()}
-                      </span>
                     </div>
-                  ))}
+                  ))
+                )}
               </div>
             </div>
 
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">Recent Activity</p>
-              <div className="space-y-2">
-                <div className="text-sm">
-                  <p className="font-medium">4 new customers this month</p>
-                  <p className="text-muted-foreground">+12.5% from last month</p>
-                </div>
-                <div className="text-sm">
-                  <p className="font-medium">15 payments processed</p>
-                  <p className="text-muted-foreground">$24,500 total revenue</p>
-                </div>
-              </div>
-            </div>
-
-            <Button className="w-full gap-2">
-              <PlusCircle className="h-4 w-4" />
-              Add New Customer
+            <Button asChild className="w-full gap-2">
+              <Link to="/customers">
+                <PlusCircle className="h-4 w-4" />
+                View All Customers
+              </Link>
             </Button>
           </CardContent>
         </Card>
