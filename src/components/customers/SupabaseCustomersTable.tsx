@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Table,
@@ -11,53 +11,118 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, UserPlus } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Search, UserPlus, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
-
-interface CustomerData {
-  custno: string;
-  custname: string | null;
-  address: string | null;
-  payterm: string | null;
-}
+import { useToast } from "@/hooks/use-toast";
+import { CustomerDialog } from "./CustomerDialog";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 
 const SupabaseCustomersTable = () => {
-  const [customers, setCustomers] = useState<CustomerData[]>([]);
+  const [customers, setCustomers] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [customerToDelete, setCustomerToDelete] = useState<string | null>(null);
   const { toast } = useToast();
 
-  useEffect(() => {
-    const fetchCustomers = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('customer')
-          .select('*');
-        
-        if (error) {
-          throw error;
-        }
-        
-        setCustomers(data || []);
-      } catch (error: any) {
-        console.error('Error fetching customers:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load customers. " + error.message,
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const fetchCustomers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('customer')
+        .select('*')
+        .order('custno', { ascending: true });
+      
+      if (error) throw error;
+      setCustomers(data || []);
+    } catch (error: any) {
+      console.error('Error fetching customers:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load customers. " + error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  React.useEffect(() => {
     fetchCustomers();
-  }, [toast]);
+  }, []);
+
+  const handleAddClick = async () => {
+    try {
+      // Fetch the last customer number
+      const { data, error } = await supabase
+        .from('customer')
+        .select('custno')
+        .order('custno', { ascending: false })
+        .limit(1);
+
+      if (error) throw error;
+
+      let nextCustomerNo = 'C0001';
+      if (data && data.length > 0) {
+        const lastNo = parseInt(data[0].custno.substring(1));
+        nextCustomerNo = `C${String(lastNo + 1).padStart(4, '0')}`;
+      }
+
+      setSelectedCustomer({ custno: nextCustomerNo, custname: '', address: '', payterm: '' });
+      setDialogOpen(true);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to generate customer number. " + error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEdit = (customer: any) => {
+    setSelectedCustomer(customer);
+    setDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!customerToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from('customer')
+        .delete()
+        .eq('custno', customerToDelete);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Customer deleted successfully",
+      });
+      fetchCustomers();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to delete customer. " + error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteDialogOpen(false);
+      setCustomerToDelete(null);
+    }
+  };
 
   const filteredCustomers = customers.filter((customer) => {
-    // Apply search filter
     return searchQuery === "" ||
       (customer.custname && customer.custname.toLowerCase().includes(searchQuery.toLowerCase())) ||
       customer.custno.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -76,12 +141,10 @@ const SupabaseCustomersTable = () => {
             className="pl-10"
           />
         </div>
-        <div className="flex items-center gap-2">
-          <Button className="gap-2">
-            <UserPlus size={16} />
-            <span>Add Customer</span>
-          </Button>
-        </div>
+        <Button className="gap-2" onClick={handleAddClick}>
+          <UserPlus size={16} />
+          <span>Add Customer</span>
+        </Button>
       </div>
 
       {isLoading ? (
@@ -97,12 +160,13 @@ const SupabaseCustomersTable = () => {
                 <TableHead>Name</TableHead>
                 <TableHead className="hidden md:table-cell">Address</TableHead>
                 <TableHead className="hidden lg:table-cell">Payment Term</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredCustomers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center h-24">
+                  <TableCell colSpan={5} className="text-center h-24">
                     No customers found.
                   </TableCell>
                 </TableRow>
@@ -110,21 +174,42 @@ const SupabaseCustomersTable = () => {
                 filteredCustomers.map((customer) => (
                   <TableRow key={customer.custno}>
                     <TableCell className="font-medium">
+                      {customer.custno}
+                    </TableCell>
+                    <TableCell>
                       <Link
                         to={`/customers/${customer.custno}`}
                         className="hover:underline text-primary"
                       >
-                        {customer.custno}
+                        {customer.custname || "N/A"}
                       </Link>
-                    </TableCell>
-                    <TableCell>
-                      {customer.custname || "N/A"}
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
                       {customer.address || "N/A"}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
                       {customer.payterm || "N/A"}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleEdit(customer)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => {
+                            setCustomerToDelete(customer.custno);
+                            setDeleteDialogOpen(true);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -133,6 +218,29 @@ const SupabaseCustomersTable = () => {
           </Table>
         </div>
       )}
+
+      <CustomerDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        customer={selectedCustomer}
+        onSuccess={fetchCustomers}
+      />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the customer
+              and all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
