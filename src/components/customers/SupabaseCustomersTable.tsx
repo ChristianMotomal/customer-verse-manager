@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Table,
@@ -9,12 +9,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, UserPlus, Pencil, Trash2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { UserPlus, Pencil, Trash2 } from "lucide-react";
 import { CustomerDialog } from "./CustomerDialog";
+import { CustomerSearch } from "./CustomerSearch";
+import { CustomerTableLoading } from "./CustomerTableLoading";
+import { useCustomers } from "@/hooks/useCustomers";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -27,41 +27,13 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const SupabaseCustomersTable = () => {
-  const [customers, setCustomers] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [customerToDelete, setCustomerToDelete] = useState<string | null>(null);
-  const { toast } = useToast();
-
-  const fetchCustomers = async () => {
-    try {
-      setIsLoading(true);
-      const { data, error } = await supabase
-        .from('customer')
-        .select('*')
-        .order('custno', { ascending: true });
-      
-      if (error) throw error;
-      setCustomers(data || []);
-      console.log("Fetched customers:", data);
-    } catch (error: any) {
-      console.error('Error fetching customers:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load customers. " + error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCustomers();
-  }, []);
+  
+  const { customers, isLoading, deleteCustomer, fetchCustomers } = useCustomers();
 
   const handleAddClick = () => {
     setSelectedCustomer(null);
@@ -75,29 +47,8 @@ const SupabaseCustomersTable = () => {
 
   const handleDelete = async () => {
     if (!customerToDelete) return;
-
-    try {
-      const { error } = await supabase
-        .from('customer')
-        .delete()
-        .eq('custno', customerToDelete);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Customer deleted successfully",
-      });
-      
-      fetchCustomers();
-    } catch (error: any) {
-      console.error("Error deleting customer:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete customer. " + error.message,
-        variant: "destructive",
-      });
-    } finally {
+    const success = await deleteCustomer(customerToDelete);
+    if (success) {
       setDeleteDialogOpen(false);
       setCustomerToDelete(null);
     }
@@ -113,15 +64,10 @@ const SupabaseCustomersTable = () => {
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-        <div className="flex-1 relative max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            placeholder="Search customers..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+        <CustomerSearch 
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+        />
         <Button className="gap-2" onClick={handleAddClick}>
           <UserPlus size={16} />
           <span>Add Customer</span>
@@ -129,9 +75,7 @@ const SupabaseCustomersTable = () => {
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
-        </div>
+        <CustomerTableLoading />
       ) : (
         <div className="border rounded-md">
           <Table>
