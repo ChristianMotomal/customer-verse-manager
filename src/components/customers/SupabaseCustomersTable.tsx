@@ -63,37 +63,12 @@ const SupabaseCustomersTable = () => {
     fetchCustomers();
   }, []);
 
-  const handleAddClick = async () => {
-    try {
-      // Fetch the last customer number
-      const { data, error } = await supabase
-        .from('customer')
-        .select('custno')
-        .order('custno', { ascending: false })
-        .limit(1);
-
-      if (error) throw error;
-
-      let nextCustomerNo = 'C0001';
-      if (data && data.length > 0) {
-        const lastNo = parseInt(data[0].custno.substring(1));
-        nextCustomerNo = `C${String(lastNo + 1).padStart(4, '0')}`;
-      }
-
-      setSelectedCustomer({ custno: nextCustomerNo, custname: '', address: '', payterm: '' });
-      setDialogOpen(true);
-    } catch (error: any) {
-      console.error("Error generating customer number:", error);
-      toast({
-        title: "Error",
-        description: "Failed to generate customer number. " + error.message,
-        variant: "destructive",
-      });
-    }
+  const handleAddClick = () => {
+    setSelectedCustomer(null);
+    setDialogOpen(true);
   };
 
   const handleEdit = (customer: any) => {
-    console.log("Editing customer:", customer);
     setSelectedCustomer(customer);
     setDialogOpen(true);
   };
@@ -102,7 +77,6 @@ const SupabaseCustomersTable = () => {
     if (!customerToDelete) return;
 
     try {
-      console.log("Deleting customer:", customerToDelete);
       const { error } = await supabase
         .from('customer')
         .delete()
@@ -114,6 +88,7 @@ const SupabaseCustomersTable = () => {
         title: "Success",
         description: "Customer deleted successfully",
       });
+      
       fetchCustomers();
     } catch (error: any) {
       console.error("Error deleting customer:", error);

@@ -48,25 +48,17 @@ export function CustomerDialog({ open, onOpenChange, customer, onSuccess }: Cust
 
   useEffect(() => {
     if (customer) {
-      setValue("custno", customer.custno || "");
+      setValue("custno", customer.custno);
       setValue("custname", customer.custname || "");
       setValue("address", customer.address || "");
       setValue("payterm", customer.payterm || "");
     } else {
-      reset({
-        custno: "",
-        custname: "",
-        address: "",
-        payterm: "",
-      });
+      reset();
     }
   }, [customer, setValue, reset]);
 
   const onSubmit = async (data: CustomerFormData) => {
     try {
-      console.log("Submitting data:", data);
-      console.log("Is editing:", isEditing);
-
       if (isEditing) {
         const { error } = await supabase
           .from("customer")
@@ -78,29 +70,46 @@ export function CustomerDialog({ open, onOpenChange, customer, onSuccess }: Cust
           .eq("custno", customer?.custno);
 
         if (error) throw error;
-        
+
         toast({
           title: "Success",
           description: "Customer updated successfully",
         });
       } else {
-        const { error } = await supabase
+        // Generate new customer number
+        const { data: lastCustomer, error: fetchError } = await supabase
           .from("customer")
-          .insert([{
-            custno: data.custno,
-            custname: data.custname,
-            address: data.address,
-            payterm: data.payterm,
-          }]);
-          
-        if (error) throw error;
-        
+          .select("custno")
+          .order("custno", { ascending: false })
+          .limit(1);
+
+        if (fetchError) throw fetchError;
+
+        let nextCustomerNo = "C0001";
+        if (lastCustomer && lastCustomer.length > 0) {
+          const lastNo = parseInt(lastCustomer[0].custno.substring(1));
+          nextCustomerNo = `C${String(lastNo + 1).padStart(4, "0")}`;
+        }
+
+        const { error: insertError } = await supabase
+          .from("customer")
+          .insert([
+            {
+              custno: nextCustomerNo,
+              custname: data.custname,
+              address: data.address,
+              payterm: data.payterm,
+            },
+          ]);
+
+        if (insertError) throw insertError;
+
         toast({
           title: "Success",
           description: "Customer added successfully",
         });
       }
-      
+
       onSuccess();
       onOpenChange(false);
       reset();
@@ -122,15 +131,6 @@ export function CustomerDialog({ open, onOpenChange, customer, onSuccess }: Cust
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="custno">Customer No</Label>
-              <Input
-                id="custno"
-                {...register("custno", { required: "Customer number is required" })}
-                disabled={isEditing}
-              />
-              {errors.custno && <p className="text-sm text-red-500">{errors.custno.message}</p>}
-            </div>
             <div className="grid gap-2">
               <Label htmlFor="custname">Name</Label>
               <Input
