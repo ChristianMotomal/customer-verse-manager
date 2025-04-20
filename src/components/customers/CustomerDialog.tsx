@@ -1,4 +1,3 @@
-
 import React, { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { CustomerTransactions } from "./CustomerTransactions";
 
 interface CustomerFormData {
   custno: string;
@@ -125,11 +125,11 @@ export function CustomerDialog({ open, onOpenChange, customer, onSuccess }: Cust
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>{isEditing ? "Edit Customer" : "Add Customer"}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)}>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="custname">Name</Label>
@@ -153,6 +153,12 @@ export function CustomerDialog({ open, onOpenChange, customer, onSuccess }: Cust
                 {...register("payterm")}
               />
             </div>
+            
+            {isEditing && (
+              <div className="mt-6">
+                <CustomerTransactions customerId={customer.custno} />
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button type="submit">
