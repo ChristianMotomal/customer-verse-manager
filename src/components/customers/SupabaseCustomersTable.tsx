@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";  // Add this import
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Table,
@@ -57,7 +57,7 @@ const SupabaseCustomersTable = () => {
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     fetchCustomers();
   }, []);
 
