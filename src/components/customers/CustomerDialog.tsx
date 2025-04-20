@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -29,15 +29,15 @@ interface CustomerDialogProps {
     custname: string | null;
     address: string | null;
     payterm: string | null;
-  };
+  } | null;
   onSuccess: () => void;
 }
 
 export function CustomerDialog({ open, onOpenChange, customer, onSuccess }: CustomerDialogProps) {
   const { toast } = useToast();
-  const isEditing = !!customer;
+  const isEditing = !!customer?.custno;
 
-  const { register, handleSubmit, reset, setValue } = useForm<CustomerFormData>({
+  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<CustomerFormData>({
     defaultValues: {
       custno: "",
       custname: "",
@@ -46,17 +46,27 @@ export function CustomerDialog({ open, onOpenChange, customer, onSuccess }: Cust
     },
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (customer) {
-      setValue("custno", customer.custno);
+      setValue("custno", customer.custno || "");
       setValue("custname", customer.custname || "");
       setValue("address", customer.address || "");
       setValue("payterm", customer.payterm || "");
+    } else {
+      reset({
+        custno: "",
+        custname: "",
+        address: "",
+        payterm: "",
+      });
     }
-  }, [customer, setValue]);
+  }, [customer, setValue, reset]);
 
   const onSubmit = async (data: CustomerFormData) => {
     try {
+      console.log("Submitting data:", data);
+      console.log("Is editing:", isEditing);
+
       if (isEditing) {
         const { error } = await supabase
           .from("customer")
@@ -65,28 +75,40 @@ export function CustomerDialog({ open, onOpenChange, customer, onSuccess }: Cust
             address: data.address,
             payterm: data.payterm,
           })
-          .eq("custno", customer.custno);
+          .eq("custno", customer?.custno);
 
         if (error) throw error;
+        
         toast({
           title: "Success",
           description: "Customer updated successfully",
         });
       } else {
-        const { error } = await supabase.from("customer").insert([data]);
+        const { error } = await supabase
+          .from("customer")
+          .insert([{
+            custno: data.custno,
+            custname: data.custname,
+            address: data.address,
+            payterm: data.payterm,
+          }]);
+          
         if (error) throw error;
+        
         toast({
           title: "Success",
           description: "Customer added successfully",
         });
       }
+      
       onSuccess();
       onOpenChange(false);
       reset();
     } catch (error: any) {
+      console.error("Error saving customer:", error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to save customer",
         variant: "destructive",
       });
     }
@@ -104,16 +126,18 @@ export function CustomerDialog({ open, onOpenChange, customer, onSuccess }: Cust
               <Label htmlFor="custno">Customer No</Label>
               <Input
                 id="custno"
-                {...register("custno")}
+                {...register("custno", { required: "Customer number is required" })}
                 disabled={isEditing}
               />
+              {errors.custno && <p className="text-sm text-red-500">{errors.custno.message}</p>}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="custname">Name</Label>
               <Input
                 id="custname"
-                {...register("custname")}
+                {...register("custname", { required: "Customer name is required" })}
               />
+              {errors.custname && <p className="text-sm text-red-500">{errors.custname.message}</p>}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="address">Address</Label>

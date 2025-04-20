@@ -1,6 +1,7 @@
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import SupabaseCustomersTable from "@/components/customers/SupabaseCustomersTable";
+import { Toaster } from "@/components/ui/toaster";
 
 const CustomersPage = () => {
   return (
@@ -12,6 +13,7 @@ const CustomersPage = () => {
         </p>
       </div>
       <SupabaseCustomersTable />
+      <Toaster />
     </DashboardLayout>
   );
 };

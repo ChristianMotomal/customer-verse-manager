@@ -38,6 +38,7 @@ const SupabaseCustomersTable = () => {
 
   const fetchCustomers = async () => {
     try {
+      setIsLoading(true);
       const { data, error } = await supabase
         .from('customer')
         .select('*')
@@ -45,6 +46,7 @@ const SupabaseCustomersTable = () => {
       
       if (error) throw error;
       setCustomers(data || []);
+      console.log("Fetched customers:", data);
     } catch (error: any) {
       console.error('Error fetching customers:', error);
       toast({
@@ -81,6 +83,7 @@ const SupabaseCustomersTable = () => {
       setSelectedCustomer({ custno: nextCustomerNo, custname: '', address: '', payterm: '' });
       setDialogOpen(true);
     } catch (error: any) {
+      console.error("Error generating customer number:", error);
       toast({
         title: "Error",
         description: "Failed to generate customer number. " + error.message,
@@ -90,6 +93,7 @@ const SupabaseCustomersTable = () => {
   };
 
   const handleEdit = (customer: any) => {
+    console.log("Editing customer:", customer);
     setSelectedCustomer(customer);
     setDialogOpen(true);
   };
@@ -98,6 +102,7 @@ const SupabaseCustomersTable = () => {
     if (!customerToDelete) return;
 
     try {
+      console.log("Deleting customer:", customerToDelete);
       const { error } = await supabase
         .from('customer')
         .delete()
@@ -111,6 +116,7 @@ const SupabaseCustomersTable = () => {
       });
       fetchCustomers();
     } catch (error: any) {
+      console.error("Error deleting customer:", error);
       toast({
         title: "Error",
         description: "Failed to delete customer. " + error.message,
