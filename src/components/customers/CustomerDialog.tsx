@@ -73,8 +73,12 @@ export function CustomerDialog({ open, onOpenChange, customer, onSuccess }: Cust
   }, [customer, setValue, reset]);
 
   const handleFormSubmit = (data: CustomerFormData) => {
-    setPendingFormData(data);
-    setShowConfirmDialog(true);
+    if (isEditing) {
+      setPendingFormData(data);
+      setShowConfirmDialog(true);
+    } else {
+      onSubmit(data);
+    }
   };
 
   const onSubmit = async (data: CustomerFormData) => {
@@ -201,20 +205,23 @@ export function CustomerDialog({ open, onOpenChange, customer, onSuccess }: Cust
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Changes</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to {isEditing ? "update" : "add"} this customer? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setPendingFormData(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmSave}>Confirm</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {isEditing && (
+        <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirm Changes</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to update this customer? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setPendingFormData(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmSave}>Confirm</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </>
   );
 }
+
