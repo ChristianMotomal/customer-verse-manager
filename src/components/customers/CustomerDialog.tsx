@@ -1,3 +1,4 @@
+
 import React, { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { CustomerTransactions } from "./CustomerTransactions";
 import { Check } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface CustomerFormData {
   custno: string;
@@ -152,48 +154,50 @@ export function CustomerDialog({ open, onOpenChange, customer, onSuccess }: Cust
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl max-h-[85vh]">
           <DialogHeader>
             <DialogTitle>{isEditing ? "Edit Customer" : "Add Customer"}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit(handleFormSubmit)}>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="custname">Name</Label>
-                <Input
-                  id="custname"
-                  {...register("custname", { required: "Customer name is required" })}
-                />
-                {errors.custname && <p className="text-sm text-red-500">{errors.custname.message}</p>}
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="address">Address</Label>
-                <Input
-                  id="address"
-                  {...register("address")}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="payterm">Payment Term</Label>
-                <Input
-                  id="payterm"
-                  {...register("payterm")}
-                />
-              </div>
-              
-              {isEditing && (
-                <div className="mt-6">
-                  <CustomerTransactions customerId={customer.custno} />
+          <ScrollArea className="max-h-[calc(85vh-120px)] pr-4">
+            <form onSubmit={handleSubmit(handleFormSubmit)}>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="custname">Name</Label>
+                  <Input
+                    id="custname"
+                    {...register("custname", { required: "Customer name is required" })}
+                  />
+                  {errors.custname && <p className="text-sm text-red-500">{errors.custname.message}</p>}
                 </div>
-              )}
-            </div>
-            <DialogFooter>
-              <Button type="submit">
-                <Check className="mr-2 h-4 w-4" />
-                {isEditing ? "Save changes" : "Add customer"}
-              </Button>
-            </DialogFooter>
-          </form>
+                <div className="grid gap-2">
+                  <Label htmlFor="address">Address</Label>
+                  <Input
+                    id="address"
+                    {...register("address")}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="payterm">Payment Term</Label>
+                  <Input
+                    id="payterm"
+                    {...register("payterm")}
+                  />
+                </div>
+                
+                {isEditing && (
+                  <div className="mt-6">
+                    <CustomerTransactions customerId={customer.custno} />
+                  </div>
+                )}
+              </div>
+              <DialogFooter className="mt-6 sticky bottom-0 pt-2 bg-background">
+                <Button type="submit">
+                  <Check className="mr-2 h-4 w-4" />
+                  {isEditing ? "Save changes" : "Add customer"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
 
