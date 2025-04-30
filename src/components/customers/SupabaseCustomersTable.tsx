@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { UserPlus, Pencil, Trash2 } from "lucide-react";
+import { UserPlus, Pencil, Trash2, Info } from "lucide-react";
 import { CustomerDialog } from "./CustomerDialog";
 import { CustomerSearch } from "./CustomerSearch";
 import { CustomerTableLoading } from "./CustomerTableLoading";
@@ -25,6 +25,12 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const SupabaseCustomersTable = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -124,16 +130,28 @@ const SupabaseCustomersTable = () => {
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => {
-                            setCustomerToDelete(customer.custno);
-                            setDeleteDialogOpen(true);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => {
+                                  setCustomerToDelete(customer.custno);
+                                  setDeleteDialogOpen(true);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Delete customer</p>
+                              <p className="text-xs text-muted-foreground">
+                                Only customers with no sales can be deleted
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
                     </TableCell>
                   </TableRow>

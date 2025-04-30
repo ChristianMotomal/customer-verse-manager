@@ -30,8 +30,35 @@ export const useCustomers = () => {
     }
   };
 
+  const checkCustomerHasSales = async (customerNo: string) => {
+    const { data, error } = await supabase
+      .from('sales')
+      .select('transno')
+      .eq('custno', customerNo)
+      .limit(1);
+    
+    if (error) {
+      throw error;
+    }
+    
+    return data && data.length > 0;
+  };
+
   const deleteCustomer = async (customerToDelete: string) => {
     try {
+      // First check if customer has related sales
+      const hasSales = await checkCustomerHasSales(customerToDelete);
+      
+      if (hasSales) {
+        toast({
+          title: "Cannot Delete",
+          description: "This customer has sales records and cannot be deleted. Please remove the related sales records first.",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      // If no sales, proceed with deletion
       const { error } = await supabase
         .from('customer')
         .delete()
