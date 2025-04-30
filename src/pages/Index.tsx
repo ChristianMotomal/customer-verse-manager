@@ -7,10 +7,10 @@ import CustomerInsights from "@/components/dashboard/CustomerInsights";
 const Dashboard = () => {
   return (
     <DashboardLayout>
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div className="w-full">
+          <h1 className="text-3xl font-bold truncate">Dashboard</h1>
+          <p className="text-muted-foreground break-words">
             Welcome to your customer management dashboard.
           </p>
         </div>
