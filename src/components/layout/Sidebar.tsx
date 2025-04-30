@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 const Sidebar = () => {
   const location = useLocation();
@@ -61,19 +62,15 @@ const Sidebar = () => {
 
       <div className="px-4 py-6 border-t border-gray-200">
         <div className="flex items-center mb-4">
-          {profile?.avatar_url ? (
-            <img 
-              src={profile.avatar_url} 
-              alt={profile?.name || ''}
-              className="h-8 w-8 rounded-full flex-shrink-0" 
-            />
-          ) : (
-            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <span className="text-primary font-medium text-sm">
+          <Avatar className="h-8 w-8 flex-shrink-0">
+            {profile?.avatar_url ? (
+              <AvatarImage src={profile.avatar_url} alt={profile?.name || ''} />
+            ) : (
+              <AvatarFallback className="bg-primary/10">
                 {profile?.name?.charAt(0) || "U"}
-              </span>
-            </div>
-          )}
+              </AvatarFallback>
+            )}
+          </Avatar>
           <div className="ml-3 min-w-0">
             <p className="text-sm font-medium truncate">{profile?.name || 'User'}</p>
             <p className="text-xs text-muted-foreground truncate">{profile?.email || user?.email}</p>
