@@ -4,7 +4,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { LogIn, Mail, KeyRound, UserCircle2 } from "lucide-react";
+import { LogIn, Mail, KeyRound } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -20,8 +20,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { useAuth } from "@/contexts/AuthContext";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
@@ -30,34 +28,11 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-interface DemoAccount {
-  name: string;
-  email: string;
-  password: string;
-  role: string;
-}
-
-const demoAccounts: DemoAccount[] = [
-  {
-    name: "Admin User",
-    email: "admin@example.com",
-    password: "password123",
-    role: "Admin"
-  },
-  {
-    name: "Regular User",
-    email: "user@example.com",
-    password: "password123",
-    role: "User"
-  }
-];
-
 const LoginPage = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -82,16 +57,6 @@ const LoginPage = () => {
     }
   };
 
-  const handleDemoAccountSelect = (value: string) => {
-    setSelectedAccount(value);
-    const account = demoAccounts.find(acc => acc.email === value);
-    
-    if (account) {
-      form.setValue("email", account.email);
-      form.setValue("password", account.password);
-    }
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12">
       <div className="max-w-md w-full">
@@ -112,26 +77,6 @@ const LoginPage = () => {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            
-            <div className="mb-6">
-              <h3 className="text-sm font-medium mb-2">Quick Login Options</h3>
-              <Select onValueChange={handleDemoAccountSelect} value={selectedAccount || ""}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select demo account" />
-                </SelectTrigger>
-                <SelectContent>
-                  {demoAccounts.map((account) => (
-                    <SelectItem key={account.email} value={account.email}>
-                      <div className="flex items-center">
-                        <UserCircle2 className="mr-2 h-4 w-4" />
-                        <span>{account.name}</span>
-                        <span className="ml-2 text-xs text-muted-foreground">({account.role})</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
             
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
