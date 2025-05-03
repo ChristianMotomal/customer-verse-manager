@@ -6,8 +6,8 @@ import { supabase } from '@/integrations/supabase/client';
 // Generate PDF from a React component
 export const generatePdfFromElement = async (element: HTMLElement, filename: string): Promise<void> => {
   try {
-    // Wait to ensure element is fully rendered
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Wait longer to ensure element is fully rendered
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     // Improved html2canvas options for better quality and reliability
     const canvas = await html2canvas(element, {
@@ -17,7 +17,19 @@ export const generatePdfFromElement = async (element: HTMLElement, filename: str
       allowTaint: true, // Allow tainted canvas if needed
       backgroundColor: '#ffffff', // Ensure white background
       windowWidth: document.documentElement.offsetWidth,
-      windowHeight: document.documentElement.offsetHeight
+      windowHeight: document.documentElement.offsetHeight,
+      onclone: (clonedDoc) => {
+        // Ensure styles are applied in the cloned document
+        const clonedElement = clonedDoc.getElementById(element.id);
+        if (clonedElement) {
+          clonedElement.style.padding = '20px';
+          clonedElement.style.width = '100%';
+          Array.from(clonedElement.querySelectorAll('table')).forEach(table => {
+            table.style.width = '100%';
+            table.style.borderCollapse = 'collapse';
+          });
+        }
+      }
     });
     
     const imgData = canvas.toDataURL('image/png');

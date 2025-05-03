@@ -54,7 +54,7 @@ const CustomerTransactionsReport = () => {
       const data = await fetchCustomerTransactionsData(customerId || undefined);
       setTransactions(data);
       // Set report ready after data is loaded
-      setTimeout(() => setReportReady(true), 500);
+      setTimeout(() => setReportReady(true), 1000);
     } catch (error) {
       console.error("Error loading transactions:", error);
       toast({
@@ -70,7 +70,7 @@ const CustomerTransactionsReport = () => {
   // When transactions change, update report ready state
   useEffect(() => {
     if (transactions.length > 0) {
-      setTimeout(() => setReportReady(true), 500);
+      setTimeout(() => setReportReady(true), 1000);
     }
   }, [transactions]);
 
@@ -88,7 +88,7 @@ const CustomerTransactionsReport = () => {
       setIsPrinting(true);
       
       // Make sure styles are fully applied before capturing
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       await generatePdfFromElement(
         reportRef.current, 
@@ -151,7 +151,7 @@ const CustomerTransactionsReport = () => {
 
       <Card>
         <CardContent className="p-0">
-          <div ref={reportRef} className="p-6">
+          <div ref={reportRef} className="p-6" id="transaction-report">
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold">Customer Transactions Report</h2>
               <p className="text-muted-foreground">
