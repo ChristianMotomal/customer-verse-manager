@@ -1,5 +1,5 @@
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Printer } from 'lucide-react';
@@ -41,16 +41,22 @@ type Transaction = {
 const CustomerTransactionsReport = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
   const [customerId, setCustomerId] = useState('');
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const [reportReady, setReportReady] = useState(false);
 
   const loadReport = async () => {
     try {
       setIsLoading(true);
+      setReportReady(false);
       const data = await fetchCustomerTransactionsData(customerId || undefined);
       setTransactions(data);
+      // Set report ready after data is loaded
+      setTimeout(() => setReportReady(true), 500);
     } catch (error) {
+      console.error("Error loading transactions:", error);
       toast({
         title: "Error",
         description: "Failed to load transaction data",
@@ -61,10 +67,29 @@ const CustomerTransactionsReport = () => {
     }
   };
 
+  // When transactions change, update report ready state
+  useEffect(() => {
+    if (transactions.length > 0) {
+      setTimeout(() => setReportReady(true), 500);
+    }
+  }, [transactions]);
+
   const printReport = async () => {
-    if (!reportRef.current) return;
+    if (!reportRef.current || !reportReady) {
+      toast({
+        title: "Error",
+        description: "Report is not ready for printing. Please wait for it to fully load.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     try {
+      setIsPrinting(true);
+      
+      // Make sure styles are fully applied before capturing
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       await generatePdfFromElement(
         reportRef.current, 
         `customer-transactions-${customerId || 'all'}-${getReportTimestamp()}`
@@ -75,11 +100,14 @@ const CustomerTransactionsReport = () => {
         description: "Customer transactions PDF generated successfully",
       });
     } catch (error) {
+      console.error("PDF generation error:", error);
       toast({
         title: "Error",
-        description: "Failed to generate PDF",
+        description: "Failed to generate PDF. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsPrinting(false);
     }
   };
 
@@ -97,11 +125,11 @@ const CustomerTransactionsReport = () => {
           </Button>
           <Button
             onClick={printReport}
-            disabled={transactions.length === 0 || isLoading}
+            disabled={transactions.length === 0 || isLoading || isPrinting || !reportReady}
             className="flex items-center gap-2"
           >
             <Printer className="h-4 w-4" />
-            Print to PDF
+            {isPrinting ? "Generating PDF..." : "Print to PDF"}
           </Button>
         </div>
       </div>

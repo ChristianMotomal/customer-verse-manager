@@ -6,22 +6,48 @@ import { supabase } from '@/integrations/supabase/client';
 // Generate PDF from a React component
 export const generatePdfFromElement = async (element: HTMLElement, filename: string): Promise<void> => {
   try {
+    // Wait to ensure element is fully rendered
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // Improved html2canvas options for better quality and reliability
     const canvas = await html2canvas(element, {
-      scale: 2,
+      scale: 2, // Higher scale for better quality
       logging: false,
-      useCORS: true,
+      useCORS: true, // Enable CORS for images
+      allowTaint: true, // Allow tainted canvas if needed
+      backgroundColor: '#ffffff', // Ensure white background
+      windowWidth: document.documentElement.offsetWidth,
+      windowHeight: document.documentElement.offsetHeight
     });
     
     const imgData = canvas.toDataURL('image/png');
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
+      format: 'a4',
     });
     
+    // Calculate dimensions
     const imgWidth = 210; // A4 width in mm
+    const pageHeight = 295; // A4 height in mm
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
     
-    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+    // Handle multi-page content if needed
+    let heightLeft = imgHeight;
+    let position = 0;
+    
+    // First page
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+    
+    // Add more pages if content exceeds one page
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+    }
+    
     pdf.save(`${filename}.pdf`);
   } catch (error) {
     console.error('Error generating PDF:', error);
