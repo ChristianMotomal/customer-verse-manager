@@ -53,8 +53,8 @@ const CustomerTransactionsReport = () => {
       setReportReady(false);
       const data = await fetchCustomerTransactionsData(customerId || undefined);
       setTransactions(data);
-      // Set report ready after data is loaded
-      setTimeout(() => setReportReady(true), 1000);
+      // Set report ready after longer delay
+      setTimeout(() => setReportReady(true), 2000);
     } catch (error) {
       console.error("Error loading transactions:", error);
       toast({
@@ -70,7 +70,7 @@ const CustomerTransactionsReport = () => {
   // When transactions change, update report ready state
   useEffect(() => {
     if (transactions.length > 0) {
-      setTimeout(() => setReportReady(true), 1000);
+      setTimeout(() => setReportReady(true), 2000);
     }
   }, [transactions]);
 
@@ -87,8 +87,8 @@ const CustomerTransactionsReport = () => {
     try {
       setIsPrinting(true);
       
-      // Make sure styles are fully applied before capturing
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Give extra time for all styles to be fully applied
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
       await generatePdfFromElement(
         reportRef.current, 
@@ -151,7 +151,12 @@ const CustomerTransactionsReport = () => {
 
       <Card>
         <CardContent className="p-0">
-          <div ref={reportRef} className="p-6" id="transaction-report">
+          <div 
+            ref={reportRef} 
+            className="p-6 bg-white" 
+            id="transaction-report" 
+            style={{ minHeight: "200px" }}
+          >
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold">Customer Transactions Report</h2>
               <p className="text-muted-foreground">
@@ -164,7 +169,7 @@ const CustomerTransactionsReport = () => {
                 {isLoading ? "Loading transaction data..." : "No transactions to display. Use the search options to fetch transactions."}
               </div>
             ) : (
-              <>
+              <div className="space-y-8">
                 {transactions.map((transaction) => (
                   <div key={transaction.transno} className="mb-8 border rounded-lg p-4">
                     <div className="grid grid-cols-2 gap-4 mb-4">
@@ -207,7 +212,7 @@ const CustomerTransactionsReport = () => {
                     </Table>
                   </div>
                 ))}
-              </>
+              </div>
             )}
           </div>
         </CardContent>

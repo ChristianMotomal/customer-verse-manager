@@ -3,64 +3,66 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { supabase } from '@/integrations/supabase/client';
 
-// Generate PDF from a React component
+// Generate PDF from a React component - revised approach
 export const generatePdfFromElement = async (element: HTMLElement, filename: string): Promise<void> => {
   try {
-    // Wait longer to ensure element is fully rendered
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Longer delay to ensure complete rendering
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Apply styles directly to the element before capturing
+    const originalStyles = element.getAttribute('style') || '';
+    element.style.backgroundColor = '#ffffff';
+    element.style.padding = '20px';
+    element.style.width = '100%';
+    
+    // Apply table styles
+    const tables = element.querySelectorAll('table');
+    tables.forEach(table => {
+      table.style.width = '100%';
+      table.style.borderCollapse = 'collapse';
+      table.style.marginBottom = '15px';
+    });
 
-    // Improved html2canvas options for better quality and reliability
+    // Better html2canvas options for reliability
     const canvas = await html2canvas(element, {
-      scale: 2, // Higher scale for better quality
+      scale: 1.5, // Lower scale to prevent memory issues
       logging: false,
-      useCORS: true, // Enable CORS for images
-      allowTaint: true, // Allow tainted canvas if needed
-      backgroundColor: '#ffffff', // Ensure white background
-      windowWidth: document.documentElement.offsetWidth,
-      windowHeight: document.documentElement.offsetHeight,
-      onclone: (clonedDoc) => {
-        // Ensure styles are applied in the cloned document
-        const clonedElement = clonedDoc.getElementById(element.id);
-        if (clonedElement) {
-          clonedElement.style.padding = '20px';
-          clonedElement.style.width = '100%';
-          Array.from(clonedElement.querySelectorAll('table')).forEach(table => {
-            table.style.width = '100%';
-            table.style.borderCollapse = 'collapse';
-          });
-        }
-      }
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+      imageTimeout: 15000, // Longer timeout
+      removeContainer: false, // Don't remove the cloned container
     });
     
-    const imgData = canvas.toDataURL('image/png');
+    // Create PDF with more reliable settings
+    const imgWidth = 210; // A4 width in mm
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
     const pdf = new jsPDF({
-      orientation: 'portrait',
+      orientation: imgHeight > imgWidth ? 'portrait' : 'landscape',
       unit: 'mm',
       format: 'a4',
     });
     
-    // Calculate dimensions
-    const imgWidth = 210; // A4 width in mm
-    const pageHeight = 295; // A4 height in mm
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    
-    // Handle multi-page content if needed
-    let heightLeft = imgHeight;
-    let position = 0;
-    
-    // First page
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
-    
-    // Add more pages if content exceeds one page
-    while (heightLeft > 0) {
-      position = heightLeft - imgHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+    try {
+      // Add image with error handling
+      pdf.addImage(
+        canvas.toDataURL('image/jpeg', 0.95), // Use JPEG instead of PNG with 0.95 quality
+        'JPEG', 
+        0, 
+        0, 
+        imgWidth, 
+        imgHeight
+      );
+      
+      // Restore original styles
+      element.setAttribute('style', originalStyles);
+      
+      // Save PDF
+      pdf.save(`${filename}.pdf`);
+    } catch (imageError) {
+      console.error('Error adding image to PDF:', imageError);
+      throw new Error('Failed to process report image');
     }
-    
-    pdf.save(`${filename}.pdf`);
   } catch (error) {
     console.error('Error generating PDF:', error);
     throw new Error('Failed to generate PDF');
