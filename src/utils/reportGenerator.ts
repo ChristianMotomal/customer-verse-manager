@@ -1,4 +1,3 @@
-
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,25 +5,19 @@ import { supabase } from '@/integrations/supabase/client';
 // Generate PDF from a React component - more robust approach
 export const generatePdfFromElement = async (element: HTMLElement, filename: string): Promise<void> => {
   try {
-    // Ensure element rendering is complete with longer delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Clone the element to avoid modifying the displayed one
+    // Create a clone of the element
     const clone = element.cloneNode(true) as HTMLElement;
-    document.body.appendChild(clone);
     
-    // Apply proper styling to ensure content is visible in PDF
-    clone.style.position = 'absolute';
-    clone.style.left = '-9999px';
+    // Apply necessary styles to the clone
+    clone.style.position = 'fixed';
     clone.style.top = '0';
-    clone.style.width = '1000px';  // Fixed width for better rendering
-    clone.style.height = 'auto';
+    clone.style.left = '0';
+    clone.style.width = '1200px'; // Increased width for better quality
     clone.style.backgroundColor = '#ffffff';
-    clone.style.padding = '20px';
-    clone.style.margin = '0';
-    clone.style.overflow = 'visible';
+    clone.style.zIndex = '-9999'; // Keep it invisible
+    clone.style.transform = 'scale(1)'; // Ensure no scaling issues
     
-    // Style all tables and content for better PDF output
+    // Style all tables for better PDF output
     const tables = clone.querySelectorAll('table');
     tables.forEach(table => {
       table.setAttribute('style', 'width: 100%; border-collapse: collapse; margin-bottom: 15px;');
@@ -35,61 +28,62 @@ export const generatePdfFromElement = async (element: HTMLElement, filename: str
         (cell as HTMLElement).style.padding = '8px';
       });
     });
-
-    // Force any images to load completely
-    const images = clone.querySelectorAll('img');
-    if (images.length > 0) {
-      await Promise.all(Array.from(images).map(img => {
-        if (img.complete) return Promise.resolve();
-        return new Promise(resolve => {
-          img.onload = resolve;
-          img.onerror = resolve;
-        });
-      }));
-    }
-
-    // Wait again for all styling to apply
-    await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // Improved html2canvas settings for reliability
+    // Append clone to body
+    document.body.appendChild(clone);
+    
+    // Wait for DOM to update
+    await new Promise(resolve => setTimeout(resolve, 2500));
+    
+    // Capture the clone with html2canvas
     const canvas = await html2canvas(clone, {
-      scale: 1.5,
+      scale: 2, // Higher scale for better quality
       useCORS: true,
       allowTaint: true,
-      backgroundColor: '#ffffff',
       logging: false,
-      onclone: (clonedDoc) => {
-        const el = clonedDoc.querySelector('#transaction-report') as HTMLElement;
-        if (el) {
-          el.style.height = 'auto';
-          el.style.overflow = 'visible';
-        }
-      }
+      backgroundColor: '#ffffff',
+      windowWidth: 1200,
+      windowHeight: clone.scrollHeight
     });
-
-    // Remove the clone from the document
+    
+    // Remove the clone from DOM
     document.body.removeChild(clone);
     
-    // Create PDF with proper dimensions
+    // Calculate PDF dimensions
     const imgWidth = 210; // A4 width in mm
+    const pageHeight = 297; // A4 height in mm
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    const pdf = new jsPDF({
-      orientation: imgHeight > imgWidth ? 'portrait' : 'landscape',
-      unit: 'mm',
-      format: 'a4',
-    });
-
-    // Add image to PDF with better quality
-    pdf.addImage(
-      canvas.toDataURL('image/jpeg', 0.95),
-      'JPEG',
-      0,
-      0,
-      imgWidth,
-      imgHeight
-    );
+    let heightLeft = imgHeight;
+    let position = 0;
     
-    // Save PDF
+    // Create PDF with proper dimensions
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    let firstPage = true;
+    
+    // Add image to PDF with potentially multiple pages if needed
+    while (heightLeft > 0) {
+      // Add new page if not the first page
+      if (!firstPage) {
+        pdf.addPage();
+      } else {
+        firstPage = false;
+      }
+      
+      pdf.addImage(
+        canvas.toDataURL('image/jpeg', 1.0),
+        'JPEG',
+        0,
+        position,
+        imgWidth,
+        imgHeight
+      );
+      
+      // Update remaining height and position
+      heightLeft -= pageHeight;
+      position -= pageHeight;
+    }
+    
+    // Save the PDF
     pdf.save(`${filename}.pdf`);
   } catch (error) {
     console.error('Error generating PDF:', error);

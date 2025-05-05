@@ -54,7 +54,7 @@ const CustomerTransactionsReport = () => {
       const data = await fetchCustomerTransactionsData(customerId || undefined);
       setTransactions(data);
       
-      // Set report ready after data is loaded with delay
+      // Set report ready after data is loaded
       setTimeout(() => setReportReady(true), 2000);
     } catch (error) {
       console.error("Error loading transactions:", error);
@@ -87,15 +87,12 @@ const CustomerTransactionsReport = () => {
     
     try {
       setIsPrinting(true);
+      toast({
+        title: "Processing",
+        description: "Generating PDF, please wait...",
+      });
       
-      // Ensure content is fully rendered before generating PDF
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Check if report container has content
-      if (reportRef.current.querySelectorAll('table').length === 0 && transactions.length > 0) {
-        throw new Error("Report content not fully rendered");
-      }
-      
+      // Generate the PDF
       await generatePdfFromElement(
         reportRef.current, 
         `customer-transactions-${customerId || 'all'}-${getReportTimestamp()}`
@@ -161,7 +158,7 @@ const CustomerTransactionsReport = () => {
             ref={reportRef} 
             className="p-6 bg-white" 
             id="transaction-report" 
-            style={{ minHeight: "500px" }} // Ensure there's always enough height
+            style={{ minHeight: "500px", width: "100%" }}
           >
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold">Customer Transactions Report</h2>
