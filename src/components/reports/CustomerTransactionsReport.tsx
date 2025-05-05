@@ -63,14 +63,14 @@ const CustomerTransactionsReport = () => {
     } finally {
       setIsLoading(false);
       // Set report ready status after data is loaded and rendered
-      setTimeout(() => setReportReady(true), 500);
+      setTimeout(() => setReportReady(true), 2000); // Longer timeout to ensure all content renders
     }
   };
 
   // When transactions change, update report ready state
   useEffect(() => {
     if (transactions.length > 0) {
-      setTimeout(() => setReportReady(true), 500);
+      setTimeout(() => setReportReady(true), 2000); // Longer timeout to ensure all content renders
     }
   }, [transactions]);
 
@@ -175,8 +175,12 @@ const CustomerTransactionsReport = () => {
               </div>
             ) : (
               <div className="space-y-8">
-                {transactions.map((transaction) => (
-                  <div key={transaction.transno} className="mb-8 border border-gray-200 rounded-lg p-4">
+                {transactions.map((transaction, index) => (
+                  <div 
+                    key={transaction.transno} 
+                    id={`transaction-${index}`}
+                    className="mb-8 border border-gray-200 rounded-lg p-4"
+                  >
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div>
                         <p className="mb-1"><span className="font-medium">Transaction #:</span> {transaction.transno}</p>
@@ -200,8 +204,8 @@ const CustomerTransactionsReport = () => {
                       </TableHeader>
                       <TableBody>
                         {transaction.salesdetails?.length ? (
-                          transaction.salesdetails.map((detail, index) => (
-                            <TableRow key={`${transaction.transno}-${detail.prodcode}-${index}`}>
+                          transaction.salesdetails.map((detail, detailIndex) => (
+                            <TableRow key={`${transaction.transno}-${detail.prodcode}-${detailIndex}`}>
                               <TableCell className="border border-gray-200">{detail.prodcode}</TableCell>
                               <TableCell className="border border-gray-200">{detail.product?.description || 'N/A'}</TableCell>
                               <TableCell className="border border-gray-200">{detail.quantity}</TableCell>

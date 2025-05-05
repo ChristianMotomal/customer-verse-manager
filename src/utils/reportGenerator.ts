@@ -40,6 +40,16 @@ export const generatePdfFromElement = async (element: HTMLElement, filename: str
         (header as HTMLElement).style.fontWeight = 'bold';
       });
     });
+
+    // Ensure all transaction cards are visible and styled properly
+    const transactionCards = clone.querySelectorAll('[id^="transaction-"]');
+    transactionCards.forEach(card => {
+      (card as HTMLElement).style.pageBreakInside = 'avoid';
+      (card as HTMLElement).style.marginBottom = '20px';
+      (card as HTMLElement).style.border = '1px solid #ddd';
+      (card as HTMLElement).style.padding = '15px';
+      (card as HTMLElement).style.borderRadius = '4px';
+    });
     
     // Ensure all images are loaded before rendering
     const images = Array.from(clone.querySelectorAll('img'));
@@ -56,8 +66,8 @@ export const generatePdfFromElement = async (element: HTMLElement, filename: str
     // Append clone to body temporarily
     document.body.appendChild(clone);
     
-    // Wait for DOM and styling to be fully applied
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Wait longer for DOM and styling to be fully applied
+    await new Promise(resolve => setTimeout(resolve, 2000));
     
     // Capture the clone with html2canvas at high resolution
     const canvas = await html2canvas(clone, {
