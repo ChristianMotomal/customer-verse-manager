@@ -3,38 +3,74 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { supabase } from '@/integrations/supabase/client';
 
-// Generate PDF from a React component - revised approach
+// Generate PDF from a React component - more robust approach
 export const generatePdfFromElement = async (element: HTMLElement, filename: string): Promise<void> => {
   try {
-    // Longer delay to ensure complete rendering
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // Ensure element rendering is complete with longer delay
+    await new Promise(resolve => setTimeout(resolve, 2000));
     
-    // Apply styles directly to the element before capturing
-    const originalStyles = element.getAttribute('style') || '';
-    element.style.backgroundColor = '#ffffff';
-    element.style.padding = '20px';
-    element.style.width = '100%';
+    // Clone the element to avoid modifying the displayed one
+    const clone = element.cloneNode(true) as HTMLElement;
+    document.body.appendChild(clone);
     
-    // Apply table styles
-    const tables = element.querySelectorAll('table');
+    // Apply proper styling to ensure content is visible in PDF
+    clone.style.position = 'absolute';
+    clone.style.left = '-9999px';
+    clone.style.top = '0';
+    clone.style.width = '1000px';  // Fixed width for better rendering
+    clone.style.height = 'auto';
+    clone.style.backgroundColor = '#ffffff';
+    clone.style.padding = '20px';
+    clone.style.margin = '0';
+    clone.style.overflow = 'visible';
+    
+    // Style all tables and content for better PDF output
+    const tables = clone.querySelectorAll('table');
     tables.forEach(table => {
-      table.style.width = '100%';
-      table.style.borderCollapse = 'collapse';
-      table.style.marginBottom = '15px';
+      table.setAttribute('style', 'width: 100%; border-collapse: collapse; margin-bottom: 15px;');
+      
+      const cells = table.querySelectorAll('td, th');
+      cells.forEach(cell => {
+        (cell as HTMLElement).style.border = '1px solid #ddd';
+        (cell as HTMLElement).style.padding = '8px';
+      });
     });
 
-    // Better html2canvas options for reliability
-    const canvas = await html2canvas(element, {
-      scale: 1.5, // Lower scale to prevent memory issues
-      logging: false,
+    // Force any images to load completely
+    const images = clone.querySelectorAll('img');
+    if (images.length > 0) {
+      await Promise.all(Array.from(images).map(img => {
+        if (img.complete) return Promise.resolve();
+        return new Promise(resolve => {
+          img.onload = resolve;
+          img.onerror = resolve;
+        });
+      }));
+    }
+
+    // Wait again for all styling to apply
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Improved html2canvas settings for reliability
+    const canvas = await html2canvas(clone, {
+      scale: 1.5,
       useCORS: true,
       allowTaint: true,
       backgroundColor: '#ffffff',
-      imageTimeout: 15000, // Longer timeout
-      removeContainer: false, // Don't remove the cloned container
+      logging: false,
+      onclone: (clonedDoc) => {
+        const el = clonedDoc.querySelector('#transaction-report') as HTMLElement;
+        if (el) {
+          el.style.height = 'auto';
+          el.style.overflow = 'visible';
+        }
+      }
     });
+
+    // Remove the clone from the document
+    document.body.removeChild(clone);
     
-    // Create PDF with more reliable settings
+    // Create PDF with proper dimensions
     const imgWidth = 210; // A4 width in mm
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
     const pdf = new jsPDF({
@@ -42,27 +78,19 @@ export const generatePdfFromElement = async (element: HTMLElement, filename: str
       unit: 'mm',
       format: 'a4',
     });
+
+    // Add image to PDF with better quality
+    pdf.addImage(
+      canvas.toDataURL('image/jpeg', 0.95),
+      'JPEG',
+      0,
+      0,
+      imgWidth,
+      imgHeight
+    );
     
-    try {
-      // Add image with error handling
-      pdf.addImage(
-        canvas.toDataURL('image/jpeg', 0.95), // Use JPEG instead of PNG with 0.95 quality
-        'JPEG', 
-        0, 
-        0, 
-        imgWidth, 
-        imgHeight
-      );
-      
-      // Restore original styles
-      element.setAttribute('style', originalStyles);
-      
-      // Save PDF
-      pdf.save(`${filename}.pdf`);
-    } catch (imageError) {
-      console.error('Error adding image to PDF:', imageError);
-      throw new Error('Failed to process report image');
-    }
+    // Save PDF
+    pdf.save(`${filename}.pdf`);
   } catch (error) {
     console.error('Error generating PDF:', error);
     throw new Error('Failed to generate PDF');

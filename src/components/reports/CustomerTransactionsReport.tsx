@@ -53,7 +53,8 @@ const CustomerTransactionsReport = () => {
       setReportReady(false);
       const data = await fetchCustomerTransactionsData(customerId || undefined);
       setTransactions(data);
-      // Set report ready after longer delay
+      
+      // Set report ready after data is loaded with delay
       setTimeout(() => setReportReady(true), 2000);
     } catch (error) {
       console.error("Error loading transactions:", error);
@@ -87,8 +88,13 @@ const CustomerTransactionsReport = () => {
     try {
       setIsPrinting(true);
       
-      // Give extra time for all styles to be fully applied
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Ensure content is fully rendered before generating PDF
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Check if report container has content
+      if (reportRef.current.querySelectorAll('table').length === 0 && transactions.length > 0) {
+        throw new Error("Report content not fully rendered");
+      }
       
       await generatePdfFromElement(
         reportRef.current, 
@@ -155,11 +161,11 @@ const CustomerTransactionsReport = () => {
             ref={reportRef} 
             className="p-6 bg-white" 
             id="transaction-report" 
-            style={{ minHeight: "200px" }}
+            style={{ minHeight: "500px" }} // Ensure there's always enough height
           >
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold">Customer Transactions Report</h2>
-              <p className="text-muted-foreground">
+              <p className="text-gray-600">
                 {customerId ? `For Customer ID: ${customerId}` : 'All Customers'} - Generated on {new Date().toLocaleDateString()}
               </p>
             </div>
@@ -171,7 +177,7 @@ const CustomerTransactionsReport = () => {
             ) : (
               <div className="space-y-8">
                 {transactions.map((transaction) => (
-                  <div key={transaction.transno} className="mb-8 border rounded-lg p-4">
+                  <div key={transaction.transno} className="mb-8 border border-gray-200 rounded-lg p-4">
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div>
                         <p><span className="font-medium">Transaction #:</span> {transaction.transno}</p>
@@ -184,28 +190,28 @@ const CustomerTransactionsReport = () => {
                     </div>
 
                     <h4 className="font-medium mb-2">Items:</h4>
-                    <Table>
+                    <Table className="border border-gray-200">
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Product Code</TableHead>
-                          <TableHead>Description</TableHead>
-                          <TableHead>Quantity</TableHead>
-                          <TableHead>Unit</TableHead>
+                          <TableHead className="border border-gray-200 bg-gray-50">Product Code</TableHead>
+                          <TableHead className="border border-gray-200 bg-gray-50">Description</TableHead>
+                          <TableHead className="border border-gray-200 bg-gray-50">Quantity</TableHead>
+                          <TableHead className="border border-gray-200 bg-gray-50">Unit</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {transaction.salesdetails?.length ? (
                           transaction.salesdetails.map((detail, index) => (
                             <TableRow key={`${transaction.transno}-${detail.prodcode}-${index}`}>
-                              <TableCell>{detail.prodcode}</TableCell>
-                              <TableCell>{detail.product?.description || 'N/A'}</TableCell>
-                              <TableCell>{detail.quantity}</TableCell>
-                              <TableCell>{detail.product?.unit || 'N/A'}</TableCell>
+                              <TableCell className="border border-gray-200">{detail.prodcode}</TableCell>
+                              <TableCell className="border border-gray-200">{detail.product?.description || 'N/A'}</TableCell>
+                              <TableCell className="border border-gray-200">{detail.quantity}</TableCell>
+                              <TableCell className="border border-gray-200">{detail.product?.unit || 'N/A'}</TableCell>
                             </TableRow>
                           ))
                         ) : (
                           <TableRow>
-                            <TableCell colSpan={4} className="text-center">No items in this transaction</TableCell>
+                            <TableCell colSpan={4} className="border border-gray-200 text-center">No items in this transaction</TableCell>
                           </TableRow>
                         )}
                       </TableBody>
