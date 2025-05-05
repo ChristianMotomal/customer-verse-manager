@@ -1,4 +1,3 @@
-
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,13 +12,14 @@ export const generatePdfFromElement = async (element: HTMLElement, filename: str
     clone.style.position = 'absolute';
     clone.style.top = '0';
     clone.style.left = '0';
-    clone.style.width = '1200px'; // Fixed width for better quality
+    clone.style.width = '1000px'; // Fixed width for better quality
     clone.style.backgroundColor = '#ffffff';
     clone.style.zIndex = '-9999'; // Keep it invisible
     
     // Ensure all content is visible
     clone.style.overflow = 'visible';
     clone.style.height = 'auto';
+    clone.style.display = 'block'; // Force display to ensure visibility
     
     // Style all tables for better PDF output
     const tables = clone.querySelectorAll('table');
@@ -49,6 +49,13 @@ export const generatePdfFromElement = async (element: HTMLElement, filename: str
       (card as HTMLElement).style.border = '1px solid #ddd';
       (card as HTMLElement).style.padding = '15px';
       (card as HTMLElement).style.borderRadius = '4px';
+      (card as HTMLElement).style.display = 'block';
+    });
+    
+    // Force display of all content sections
+    const contentDivs = clone.querySelectorAll('div');
+    contentDivs.forEach(div => {
+      (div as HTMLElement).style.display = 'block';
     });
     
     // Ensure all images are loaded before rendering
@@ -66,23 +73,38 @@ export const generatePdfFromElement = async (element: HTMLElement, filename: str
     // Append clone to body temporarily
     document.body.appendChild(clone);
     
-    // Wait longer for DOM and styling to be fully applied
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Wait longer for DOM and styling to be fully applied - significantly increased timeout
+    await new Promise(resolve => setTimeout(resolve, 3500));
     
-    // Capture the clone with html2canvas at high resolution
+    // Capture the clone with html2canvas at higher resolution
     const canvas = await html2canvas(clone, {
-      scale: 2, // Higher scale for better quality
+      scale: 3, // Higher scale for better quality
       useCORS: true,
       allowTaint: true,
-      logging: false,
+      logging: true, // Enable logging for debugging
       backgroundColor: '#ffffff',
-      width: 1200,
+      width: 1000,
       height: clone.scrollHeight,
       onclone: (clonedDoc, clonedElement) => {
         // Additional styling can be applied to the cloned document if needed
         clonedElement.style.display = 'block';
+        clonedElement.style.visibility = 'visible';
+        
+        // Force all elements to be visible in the clone
+        const allElements = clonedElement.querySelectorAll('*');
+        allElements.forEach((el: any) => {
+          if (el.style) {
+            el.style.display = el.tagName.toLowerCase() === 'table' ? 'table' : 'block';
+            el.style.visibility = 'visible';
+          }
+        });
       }
     });
+    
+    console.log('Canvas generated with dimensions:', canvas.width, 'x', canvas.height);
+    
+    // Add a small delay after canvas generation before creating PDF
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     // Remove the clone from DOM
     document.body.removeChild(clone);
@@ -92,44 +114,39 @@ export const generatePdfFromElement = async (element: HTMLElement, filename: str
     const pageHeight = 295; // A4 height in mm (slightly less than 297 to avoid overflow)
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
     
+    console.log('PDF dimensions calculated:', imgWidth, 'x', imgHeight);
+    
     // Create PDF with proper dimensions
     const pdf = new jsPDF('p', 'mm', 'a4');
     
-    // If content fits on a single page
-    if (imgHeight <= pageHeight) {
+    let heightLeft = imgHeight;
+    let position = 0;
+    let pageCount = 0;
+    
+    // Always use multi-page approach for consistency
+    while (heightLeft > 0) {
+      if (pageCount > 0) {
+        pdf.addPage();
+      }
+      
+      // Add a bit of debugging info
+      console.log(`Adding page ${pageCount + 1}, position: ${position}, heightLeft: ${heightLeft}`);
+      
       pdf.addImage(
         canvas.toDataURL('image/jpeg', 1.0),
         'JPEG',
         0,
-        0,
+        position,
         imgWidth,
         imgHeight
       );
-    } else {
-      // For multi-page content, split it across pages
-      let heightLeft = imgHeight;
-      let position = 0;
-      let pageCount = 0;
       
-      while (heightLeft > 0) {
-        if (pageCount > 0) {
-          pdf.addPage();
-        }
-        
-        pdf.addImage(
-          canvas.toDataURL('image/jpeg', 1.0),
-          'JPEG',
-          0,
-          position,
-          imgWidth,
-          imgHeight
-        );
-        
-        heightLeft -= pageHeight;
-        position -= pageHeight;
-        pageCount++;
-      }
+      heightLeft -= pageHeight;
+      position -= pageHeight;
+      pageCount++;
     }
+    
+    console.log(`PDF generated with ${pageCount} pages`);
     
     // Save the PDF
     pdf.save(`${filename}.pdf`);

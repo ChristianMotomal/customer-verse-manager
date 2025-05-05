@@ -53,6 +53,7 @@ const CustomerTransactionsReport = () => {
       setReportReady(false);
       const data = await fetchCustomerTransactionsData(customerId || undefined);
       setTransactions(data);
+      console.log("Transactions loaded:", data.length);
     } catch (error) {
       console.error("Error loading transactions:", error);
       toast({
@@ -63,14 +64,20 @@ const CustomerTransactionsReport = () => {
     } finally {
       setIsLoading(false);
       // Set report ready status after data is loaded and rendered
-      setTimeout(() => setReportReady(true), 2000); // Longer timeout to ensure all content renders
+      setTimeout(() => {
+        setReportReady(true);
+        console.log("Report marked as ready");
+      }, 3000); // Longer timeout to ensure all content renders
     }
   };
 
   // When transactions change, update report ready state
   useEffect(() => {
     if (transactions.length > 0) {
-      setTimeout(() => setReportReady(true), 2000); // Longer timeout to ensure all content renders
+      setTimeout(() => {
+        setReportReady(true);
+        console.log("Report marked as ready after transactions update");
+      }, 3000); // Longer timeout to ensure all content renders
     }
   }, [transactions]);
 
@@ -90,6 +97,11 @@ const CustomerTransactionsReport = () => {
         title: "Processing",
         description: "Generating PDF, please wait...",
       });
+      
+      console.log("Starting PDF generation");
+      
+      // Ensure report is fully rendered
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Generate the PDF with a unique filename
       await generatePdfFromElement(
