@@ -273,7 +273,8 @@ const CustomerTransactionsReport = () => {
       </Card>
       
       {/* Add a global print stylesheet */}
-      <style jsx global>{`
+      <style>
+        {`
         @media print {
           .print-container * {
             visibility: visible !important;
@@ -305,7 +306,8 @@ const CustomerTransactionsReport = () => {
             text-align: left !important;
           }
         }
-      `}</style>
+        `}
+      </style>
     </div>
   );
 };

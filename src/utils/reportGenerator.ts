@@ -80,23 +80,29 @@ export const generatePdfFromElement = async (element: HTMLElement, filename: str
           // Ensure all table elements have proper display properties
           const tables = transaction.querySelectorAll('table');
           tables.forEach(table => {
-            table.style.display = 'table';
-            table.style.width = '100%';
-            table.style.borderCollapse = 'collapse';
-            table.style.marginBottom = '10px';
-            
-            const rows = table.querySelectorAll('tr');
-            rows.forEach(row => {
-              row.style.display = 'table-row';
+            if (table instanceof HTMLElement) {
+              table.style.display = 'table';
+              table.style.width = '100%';
+              table.style.borderCollapse = 'collapse';
+              table.style.marginBottom = '10px';
               
-              const cells = row.querySelectorAll('th, td');
-              cells.forEach(cell => {
-                cell.style.display = 'table-cell';
-                cell.style.border = '1px solid #ddd';
-                cell.style.padding = '8px';
-                cell.style.textAlign = 'left';
+              const rows = table.querySelectorAll('tr');
+              rows.forEach(row => {
+                if (row instanceof HTMLElement) {
+                  row.style.display = 'table-row';
+                  
+                  const cells = row.querySelectorAll('th, td');
+                  cells.forEach(cell => {
+                    if (cell instanceof HTMLElement) {
+                      cell.style.display = 'table-cell';
+                      cell.style.border = '1px solid #ddd';
+                      cell.style.padding = '8px';
+                      cell.style.textAlign = 'left';
+                    }
+                  });
+                }
               });
-            });
+            }
           });
           
           tempContainer.appendChild(transaction);
