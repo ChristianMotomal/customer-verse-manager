@@ -2,13 +2,15 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { supabase } from '@/integrations/supabase/client';
 
-// Generate PDF from a React component - more robust approach
+// Generate PDF from a React component - enhanced for complex reports
 export const generatePdfFromElement = async (element: HTMLElement, filename: string): Promise<void> => {
   try {
+    console.log('Starting PDF generation process...');
+    
     // Create a clone of the element to avoid modifying the original
     const clone = element.cloneNode(true) as HTMLElement;
     
-    // Apply necessary styles to the clone for better rendering
+    // Apply enhanced styling to the clone for better rendering
     clone.style.position = 'absolute';
     clone.style.top = '0';
     clone.style.left = '0';
@@ -21,16 +23,18 @@ export const generatePdfFromElement = async (element: HTMLElement, filename: str
     clone.style.height = 'auto';
     clone.style.display = 'block'; // Force display to ensure visibility
     
-    // Style all tables for better PDF output
+    // Enhanced table styling for PDF
     const tables = clone.querySelectorAll('table');
     tables.forEach(table => {
-      table.setAttribute('style', 'width: 100%; border-collapse: collapse; margin-bottom: 15px;');
+      table.setAttribute('style', 'width: 100%; border-collapse: collapse; margin-bottom: 15px; display: table !important;');
       
       const cells = table.querySelectorAll('td, th');
       cells.forEach(cell => {
         (cell as HTMLElement).style.border = '1px solid #ddd';
         (cell as HTMLElement).style.padding = '8px';
         (cell as HTMLElement).style.textAlign = 'left';
+        (cell as HTMLElement).style.visibility = 'visible';
+        (cell as HTMLElement).style.display = 'table-cell';
       });
       
       // Style headers specifically
@@ -39,63 +43,129 @@ export const generatePdfFromElement = async (element: HTMLElement, filename: str
         (header as HTMLElement).style.backgroundColor = '#f2f2f2';
         (header as HTMLElement).style.fontWeight = 'bold';
       });
+      
+      // Style rows
+      const rows = table.querySelectorAll('tr');
+      rows.forEach(row => {
+        (row as HTMLElement).style.display = 'table-row';
+      });
+      
+      // Style table headers and bodies
+      const theads = table.querySelectorAll('thead');
+      theads.forEach(thead => {
+        (thead as HTMLElement).style.display = 'table-header-group';
+      });
+      
+      const tbodies = table.querySelectorAll('tbody');
+      tbodies.forEach(tbody => {
+        (tbody as HTMLElement).style.display = 'table-row-group';
+      });
     });
 
-    // Ensure all transaction cards are visible and styled properly
+    // Force transaction cards to be visible with proper styling
     const transactionCards = clone.querySelectorAll('[id^="transaction-"]');
-    transactionCards.forEach(card => {
+    transactionCards.forEach((card, index) => {
+      console.log(`Styling transaction card ${index}`);
       (card as HTMLElement).style.pageBreakInside = 'avoid';
       (card as HTMLElement).style.marginBottom = '20px';
       (card as HTMLElement).style.border = '1px solid #ddd';
       (card as HTMLElement).style.padding = '15px';
       (card as HTMLElement).style.borderRadius = '4px';
       (card as HTMLElement).style.display = 'block';
+      (card as HTMLElement).style.visibility = 'visible';
+      
+      // Make sure all child elements in cards are visible
+      const cardChildren = card.querySelectorAll('*');
+      cardChildren.forEach(child => {
+        if (child instanceof HTMLElement) {
+          child.style.visibility = 'visible';
+          if (child.tagName.toLowerCase() === 'table') {
+            child.style.display = 'table';
+          } else if (child.tagName.toLowerCase() === 'tr') {
+            child.style.display = 'table-row';
+          } else if (child.tagName.toLowerCase() === 'td' || child.tagName.toLowerCase() === 'th') {
+            child.style.display = 'table-cell';
+          } else {
+            child.style.display = 'block';
+          }
+        }
+      });
     });
     
-    // Force display of all content sections
+    // Ensure all divs are properly displayed
     const contentDivs = clone.querySelectorAll('div');
     contentDivs.forEach(div => {
       (div as HTMLElement).style.display = 'block';
+      (div as HTMLElement).style.visibility = 'visible';
     });
     
-    // Ensure all images are loaded before rendering
+    // Handle heading styles
+    const headings = clone.querySelectorAll('h1, h2, h3, h4, h5, h6');
+    headings.forEach(heading => {
+      (heading as HTMLElement).style.display = 'block';
+      (heading as HTMLElement).style.visibility = 'visible';
+      (heading as HTMLElement).style.marginBottom = '10px';
+      (heading as HTMLElement).style.pageBreakAfter = 'avoid';
+    });
+    
+    // Wait for all images to load
     const images = Array.from(clone.querySelectorAll('img'));
     await Promise.all(
       images.map(img => {
+        console.log(`Processing image: ${img.src}`);
         if (img.complete) return Promise.resolve();
         return new Promise(resolve => {
           img.onload = resolve;
           img.onerror = resolve;
+          // Set a timeout just in case
+          setTimeout(resolve, 2000);
         });
       })
     );
     
-    // Append clone to body temporarily
+    // Append clone to body temporarily but make it much more visible for debugging
     document.body.appendChild(clone);
+    console.log('Clone appended to document body');
     
-    // Wait longer for DOM and styling to be fully applied - significantly increased timeout
-    await new Promise(resolve => setTimeout(resolve, 3500));
+    // Extremely increased waiting time for DOM and styling to be fully applied
+    console.log('Waiting for rendering...');
+    await new Promise(resolve => setTimeout(resolve, 5000));
     
-    // Capture the clone with html2canvas at higher resolution
+    console.log('Proceeding with canvas capture...');
+    
+    // Use higher scale and robust options for html2canvas
     const canvas = await html2canvas(clone, {
-      scale: 3, // Higher scale for better quality
+      scale: 3, // Even higher scale for better quality
       useCORS: true,
       allowTaint: true,
-      logging: true, // Enable logging for debugging
+      logging: true,
       backgroundColor: '#ffffff',
       width: 1000,
       height: clone.scrollHeight,
+      windowWidth: 1000,
+      windowHeight: clone.scrollHeight,
       onclone: (clonedDoc, clonedElement) => {
-        // Additional styling can be applied to the cloned document if needed
+        console.log('HTML2Canvas cloning document...');
+        // Apply additional styling to ensure visibility in the canvas
         clonedElement.style.display = 'block';
         clonedElement.style.visibility = 'visible';
+        clonedElement.style.opacity = '1';
         
         // Force all elements to be visible in the clone
         const allElements = clonedElement.querySelectorAll('*');
         allElements.forEach((el: any) => {
           if (el.style) {
-            el.style.display = el.tagName.toLowerCase() === 'table' ? 'table' : 'block';
+            if (el.tagName.toLowerCase() === 'table') {
+              el.style.display = 'table';
+            } else if (el.tagName.toLowerCase() === 'tr') {
+              el.style.display = 'table-row';
+            } else if (el.tagName.toLowerCase() === 'td' || el.tagName.toLowerCase() === 'th') {
+              el.style.display = 'table-cell';
+            } else {
+              el.style.display = 'block';
+            }
             el.style.visibility = 'visible';
+            el.style.opacity = '1';
           }
         });
       }
@@ -103,10 +173,10 @@ export const generatePdfFromElement = async (element: HTMLElement, filename: str
     
     console.log('Canvas generated with dimensions:', canvas.width, 'x', canvas.height);
     
-    // Add a small delay after canvas generation before creating PDF
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Add a delay before PDF generation
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // Remove the clone from DOM
+    // Clean up - remove the clone
     document.body.removeChild(clone);
     
     // Calculate PDF dimensions (A4)
@@ -114,31 +184,38 @@ export const generatePdfFromElement = async (element: HTMLElement, filename: str
     const pageHeight = 295; // A4 height in mm (slightly less than 297 to avoid overflow)
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
     
-    console.log('PDF dimensions calculated:', imgWidth, 'x', imgHeight);
+    console.log('PDF dimensions:', imgWidth, 'x', imgHeight);
     
-    // Create PDF with proper dimensions
-    const pdf = new jsPDF('p', 'mm', 'a4');
+    // Create PDF with better settings for complex content
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+      compress: false
+    });
     
     let heightLeft = imgHeight;
     let position = 0;
     let pageCount = 0;
     
-    // Always use multi-page approach for consistency
+    // Use multi-page approach for all PDFs
     while (heightLeft > 0) {
       if (pageCount > 0) {
         pdf.addPage();
       }
       
-      // Add a bit of debugging info
       console.log(`Adding page ${pageCount + 1}, position: ${position}, heightLeft: ${heightLeft}`);
       
+      // Use higher quality image
       pdf.addImage(
         canvas.toDataURL('image/jpeg', 1.0),
         'JPEG',
         0,
         position,
         imgWidth,
-        imgHeight
+        imgHeight,
+        undefined,
+        'FAST'
       );
       
       heightLeft -= pageHeight;
@@ -150,9 +227,10 @@ export const generatePdfFromElement = async (element: HTMLElement, filename: str
     
     // Save the PDF
     pdf.save(`${filename}.pdf`);
+    console.log('PDF saved successfully');
   } catch (error) {
     console.error('Error generating PDF:', error);
-    throw new Error('Failed to generate PDF');
+    throw new Error(`Failed to generate PDF: ${String(error)}`);
   }
 };
 

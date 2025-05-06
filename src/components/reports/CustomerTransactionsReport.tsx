@@ -51,9 +51,25 @@ const CustomerTransactionsReport = () => {
     try {
       setIsLoading(true);
       setReportReady(false);
+      
+      // Clear existing data first
+      setTransactions([]);
+      
+      // Fetch new data
       const data = await fetchCustomerTransactionsData(customerId || undefined);
-      setTransactions(data);
       console.log("Transactions loaded:", data.length);
+      
+      if (data.length === 0) {
+        toast({
+          title: "No transactions found",
+          description: customerId 
+            ? `No transactions found for customer ID: ${customerId}` 
+            : "No transactions available",
+        });
+      }
+      
+      // Set data after fetching
+      setTransactions(data);
     } catch (error) {
       console.error("Error loading transactions:", error);
       toast({
@@ -63,21 +79,29 @@ const CustomerTransactionsReport = () => {
       });
     } finally {
       setIsLoading(false);
-      // Set report ready status after data is loaded and rendered
-      setTimeout(() => {
-        setReportReady(true);
-        console.log("Report marked as ready");
-      }, 3000); // Longer timeout to ensure all content renders
+      
+      // Set report ready after a longer delay to ensure rendering
+      if (reportRef.current) {
+        setTimeout(() => {
+          setReportReady(true);
+          console.log("Report marked as ready");
+        }, 2000);
+      }
     }
   };
 
-  // When transactions change, update report ready state
+  // When transactions change, update report ready state with a generous timeout
   useEffect(() => {
+    setReportReady(false);
+    
     if (transactions.length > 0) {
-      setTimeout(() => {
+      console.log(`Setting up report ready timeout for ${transactions.length} transactions`);
+      const timer = setTimeout(() => {
         setReportReady(true);
         console.log("Report marked as ready after transactions update");
       }, 3000); // Longer timeout to ensure all content renders
+      
+      return () => clearTimeout(timer);
     }
   }, [transactions]);
 
@@ -100,8 +124,16 @@ const CustomerTransactionsReport = () => {
       
       console.log("Starting PDF generation");
       
+      // Force report content visibility
+      if (reportRef.current) {
+        const reportElement = reportRef.current;
+        reportElement.style.display = 'block';
+        reportElement.style.visibility = 'visible';
+        reportElement.style.opacity = '1';
+      }
+      
       // Ensure report is fully rendered
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
       // Generate the PDF with a unique filename
       await generatePdfFromElement(
@@ -165,12 +197,12 @@ const CustomerTransactionsReport = () => {
       </div>
 
       <Card className="mt-4">
-        <CardContent className="p-0 overflow-hidden">
+        <CardContent className="p-6 print:p-0">
           <div 
             ref={reportRef} 
-            className="p-6 bg-white print:p-0" 
+            className="bg-white" 
             id="transaction-report"
-            style={{ width: "100%" }}
+            style={{ width: "100%", display: "block", visibility: "visible" }}
           >
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold">Customer Transactions Report</h2>
@@ -192,6 +224,7 @@ const CustomerTransactionsReport = () => {
                     key={transaction.transno} 
                     id={`transaction-${index}`}
                     className="mb-8 border border-gray-200 rounded-lg p-4"
+                    style={{ pageBreakInside: 'avoid', display: 'block', visibility: 'visible' }}
                   >
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div>
@@ -205,32 +238,34 @@ const CustomerTransactionsReport = () => {
                     </div>
 
                     <h4 className="font-medium mb-2">Items:</h4>
-                    <Table className="border border-gray-200">
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="border border-gray-200 bg-gray-50 font-bold">Product Code</TableHead>
-                          <TableHead className="border border-gray-200 bg-gray-50 font-bold">Description</TableHead>
-                          <TableHead className="border border-gray-200 bg-gray-50 font-bold">Quantity</TableHead>
-                          <TableHead className="border border-gray-200 bg-gray-50 font-bold">Unit</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {transaction.salesdetails?.length ? (
-                          transaction.salesdetails.map((detail, detailIndex) => (
-                            <TableRow key={`${transaction.transno}-${detail.prodcode}-${detailIndex}`}>
-                              <TableCell className="border border-gray-200">{detail.prodcode}</TableCell>
-                              <TableCell className="border border-gray-200">{detail.product?.description || 'N/A'}</TableCell>
-                              <TableCell className="border border-gray-200">{detail.quantity}</TableCell>
-                              <TableCell className="border border-gray-200">{detail.product?.unit || 'N/A'}</TableCell>
-                            </TableRow>
-                          ))
-                        ) : (
-                          <TableRow>
-                            <TableCell colSpan={4} className="border border-gray-200 text-center">No items in this transaction</TableCell>
+                    <div className="overflow-visible">
+                      <Table className="border border-gray-200 w-full" style={{ display: 'table', visibility: 'visible' }}>
+                        <TableHeader style={{ display: 'table-header-group', visibility: 'visible' }}>
+                          <TableRow style={{ display: 'table-row', visibility: 'visible' }}>
+                            <TableHead className="border border-gray-200 bg-gray-50 font-bold" style={{ display: 'table-cell', visibility: 'visible' }}>Product Code</TableHead>
+                            <TableHead className="border border-gray-200 bg-gray-50 font-bold" style={{ display: 'table-cell', visibility: 'visible' }}>Description</TableHead>
+                            <TableHead className="border border-gray-200 bg-gray-50 font-bold" style={{ display: 'table-cell', visibility: 'visible' }}>Quantity</TableHead>
+                            <TableHead className="border border-gray-200 bg-gray-50 font-bold" style={{ display: 'table-cell', visibility: 'visible' }}>Unit</TableHead>
                           </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody style={{ display: 'table-row-group', visibility: 'visible' }}>
+                          {transaction.salesdetails?.length ? (
+                            transaction.salesdetails.map((detail, detailIndex) => (
+                              <TableRow key={`${transaction.transno}-${detail.prodcode}-${detailIndex}`} style={{ display: 'table-row', visibility: 'visible' }}>
+                                <TableCell className="border border-gray-200" style={{ display: 'table-cell', visibility: 'visible' }}>{detail.prodcode}</TableCell>
+                                <TableCell className="border border-gray-200" style={{ display: 'table-cell', visibility: 'visible' }}>{detail.product?.description || 'N/A'}</TableCell>
+                                <TableCell className="border border-gray-200" style={{ display: 'table-cell', visibility: 'visible' }}>{detail.quantity}</TableCell>
+                                <TableCell className="border border-gray-200" style={{ display: 'table-cell', visibility: 'visible' }}>{detail.product?.unit || 'N/A'}</TableCell>
+                              </TableRow>
+                            ))
+                          ) : (
+                            <TableRow style={{ display: 'table-row', visibility: 'visible' }}>
+                              <TableCell colSpan={4} className="border border-gray-200 text-center" style={{ display: 'table-cell', visibility: 'visible' }}>No items in this transaction</TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
                   </div>
                 ))}
               </div>
