@@ -6,9 +6,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ShieldX } from "lucide-react";
 
+type UserRole = "admin" | "user" | "blocked";
+
 const CustomersPage = () => {
   const { profile } = useAuth();
-  const userRole = profile?.role || "user";
+  const userRole = profile?.role as UserRole || "user";
 
   // If the user is blocked, show an access denied message
   if (userRole === "blocked") {
