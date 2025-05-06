@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Printer } from 'lucide-react';
+import { Printer, Loader2 } from 'lucide-react';
 import { 
   generatePdfFromElement, 
   fetchCustomerTransactionsData, 
@@ -43,6 +43,7 @@ const CustomerTransactionsReport = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
   const [customerId, setCustomerId] = useState('');
+  const [batchSize, setBatchSize] = useState(10); // Process transactions in smaller batches
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const [reportReady, setReportReady] = useState(false);
@@ -80,15 +81,15 @@ const CustomerTransactionsReport = () => {
     } finally {
       setIsLoading(false);
       
-      // Set report ready after a longer delay to ensure rendering
+      // Set report ready after a reasonable delay
       setTimeout(() => {
         setReportReady(true);
         console.log("Report marked as ready");
-      }, 3000);
+      }, 1000);
     }
   };
 
-  // When transactions change, update report ready state with a generous timeout
+  // When transactions change, update report ready state
   useEffect(() => {
     setReportReady(false);
     
@@ -97,7 +98,7 @@ const CustomerTransactionsReport = () => {
       const timer = setTimeout(() => {
         setReportReady(true);
         console.log("Report marked as ready after transactions update");
-      }, 5000); // Longer timeout to ensure all content renders
+      }, 1000); 
       
       return () => clearTimeout(timer);
     }
@@ -117,13 +118,16 @@ const CustomerTransactionsReport = () => {
       setIsPrinting(true);
       toast({
         title: "Processing",
-        description: "Generating PDF, please wait...",
+        description: `Generating PDF with ${transactions.length} transactions. This may take a moment...`,
       });
       
-      console.log("Starting PDF generation");
-      
-      // Insert additional delay before PDF generation to ensure complete rendering
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Provide more immediate feedback for large reports
+      if (transactions.length > 20) {
+        toast({
+          title: "Large Report",
+          description: "You're generating a large report. This may take several minutes to complete.",
+        });
+      }
       
       // Generate the PDF with a unique filename
       await generatePdfFromElement(
@@ -139,7 +143,7 @@ const CustomerTransactionsReport = () => {
       console.error("PDF generation error:", error);
       toast({
         title: "Error",
-        description: "Failed to generate PDF. Please try again.",
+        description: "Failed to generate PDF. Try with fewer transactions or filter by customer ID.",
         variant: "destructive",
       });
     } finally {
@@ -164,8 +168,17 @@ const CustomerTransactionsReport = () => {
             disabled={transactions.length === 0 || isLoading || isPrinting || !reportReady}
             className="flex items-center gap-2"
           >
-            <Printer className="h-4 w-4" />
-            {isPrinting ? "Generating PDF..." : "Print to PDF"}
+            {isPrinting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Generating PDF...
+              </>
+            ) : (
+              <>
+                <Printer className="h-4 w-4" />
+                Print to PDF
+              </>
+            )}
           </Button>
         </div>
       </div>
@@ -185,6 +198,13 @@ const CustomerTransactionsReport = () => {
           {isLoading ? "Loading..." : "Search"}
         </Button>
       </div>
+
+      {isPrinting && (
+        <div className="bg-amber-50 border border-amber-200 p-3 rounded-md text-amber-800 text-sm">
+          <p className="font-medium">PDF Generation In Progress</p>
+          <p>Please don't close this window. Large reports may take several minutes to complete.</p>
+        </div>
+      )}
 
       <Card className="mt-4">
         <CardContent className="p-6">
