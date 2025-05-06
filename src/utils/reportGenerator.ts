@@ -3,158 +3,149 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { supabase } from '@/integrations/supabase/client';
 
-// Generate PDF from a React component - completely revised for reliable PDF generation
+// Completely redesigned PDF generator with direct HTML-to-PDF approach
 export const generatePdfFromElement = async (element: HTMLElement, filename: string): Promise<void> => {
   try {
-    console.log('Starting PDF generation process with direct content capture...');
+    console.log('Starting PDF generation with improved HTML capture...');
     
-    // Create a deep clone of the element to avoid modifying the original
-    const clone = element.cloneNode(true) as HTMLElement;
-    
-    // Set explicit dimensions and styling for the clone
-    clone.style.position = 'absolute';
-    clone.style.left = '-9999px';
-    clone.style.width = '800px'; // Fixed width for consistency
-    clone.style.backgroundColor = '#ffffff';
-    clone.style.overflow = 'visible';
-    clone.style.height = 'auto';
-    
-    // Apply print-specific styles
-    const printStyle = document.createElement('style');
-    printStyle.textContent = `
-      * { visibility: visible !important; display: block !important; }
-      table { display: table !important; width: 100% !important; border-collapse: collapse !important; margin-bottom: 10px !important; }
-      tr { display: table-row !important; page-break-inside: avoid !important; }
-      td, th { display: table-cell !important; border: 1px solid #ddd !important; padding: 8px !important; text-align: left !important; }
-      th { background-color: #f2f2f2 !important; font-weight: bold !important; }
-      thead { display: table-header-group !important; }
-      tbody { display: table-row-group !important; }
-      h1, h2, h3, h4, h5, h6 { page-break-after: avoid !important; margin-bottom: 10px !important; }
-      div { display: block !important; page-break-inside: avoid !important; }
-      [id^="transaction-"] { margin-bottom: 20px !important; border: 1px solid #ddd !important; padding: 15px !important; page-break-inside: avoid !important; }
-    `;
-    clone.appendChild(printStyle);
-    
-    // Add to document to calculate sizes correctly
-    document.body.appendChild(clone);
-    
-    // Wait for clone to render completely
-    console.log('Waiting for clone to render...');
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Create PDF document
+    // Create a new PDF document
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
       format: 'a4',
-      compress: false
+      compress: true
     });
     
-    // Get all transactions elements to process them individually
-    const transactions = clone.querySelectorAll('[id^="transaction-"]');
-    console.log(`Found ${transactions.length} transaction elements to process`);
+    // Deep clone the element to avoid modifying the original
+    const tempContainer = document.createElement('div');
+    tempContainer.style.position = 'absolute';
+    tempContainer.style.left = '-9999px';
+    tempContainer.style.width = '794px'; // A4 width in pixels at 96 DPI
+    tempContainer.style.backgroundColor = '#ffffff';
+    document.body.appendChild(tempContainer);
     
+    // Apply required styles globally to ensure content is visible in PDF
+    const printStyle = document.createElement('style');
+    printStyle.textContent = `
+      * { box-sizing: border-box !important; }
+      table { display: table !important; width: 100% !important; margin-bottom: 10px !important; border-collapse: collapse !important; }
+      thead { display: table-header-group !important; }
+      tbody { display: table-row-group !important; }
+      tr { display: table-row !important; page-break-inside: avoid !important; }
+      th, td { display: table-cell !important; border: 1px solid #ddd !important; padding: 8px !important; text-align: left !important; }
+      th { background-color: #f2f2f2 !important; font-weight: bold !important; }
+      .transaction-item { margin-bottom: 20px !important; page-break-inside: avoid !important; border: 1px solid #ddd !important; padding: 15px !important; background-color: #fff !important; }
+      h1, h2, h3, h4 { margin-bottom: 10px !important; page-break-after: avoid !important; }
+    `;
+    tempContainer.appendChild(printStyle);
+    
+    // Get transactions from the element
+    const transactions = Array.from(element.querySelectorAll('[id^="transaction-"]'));
+    console.log(`Found ${transactions.length} transactions to process`);
+    
+    // If no transactions, process the entire report
     if (transactions.length === 0) {
-      // If no transaction elements, capture the whole report
-      console.log('No transactions found, capturing entire report');
-      await captureElementToPdf(clone, pdf, 0);
+      tempContainer.innerHTML = element.innerHTML;
+      await processPageToPdf(tempContainer, pdf, 0, true);
     } else {
-      // Process each transaction individually for better reliability
-      for (let i = 0; i < transactions.length; i++) {
-        const transaction = transactions[i] as HTMLElement;
-        console.log(`Processing transaction ${i+1}/${transactions.length}`);
+      // Prepare report header only once
+      const reportHeader = element.querySelector('.text-center.mb-6');
+      if (reportHeader) {
+        const headerClone = reportHeader.cloneNode(true) as HTMLElement;
         
-        // Add a new page for each transaction except the first one
-        if (i > 0) {
-          pdf.addPage();
-        }
-        
-        // Style and ensure visibility of each transaction
-        transaction.style.position = 'relative';
-        transaction.style.display = 'block';
-        transaction.style.visibility = 'visible';
-        transaction.style.backgroundColor = '#ffffff';
-        transaction.style.padding = '15px';
-        transaction.style.border = '1px solid #ddd';
-        transaction.style.marginBottom = '20px';
-        
-        // Ensure all child elements are visible
-        const allElements = transaction.querySelectorAll('*');
-        allElements.forEach((el: Element) => {
-          if (el instanceof HTMLElement) {
-            el.style.display = 'block';
-            el.style.visibility = 'visible';
+        // Process each transaction as a separate page
+        for (let i = 0; i < transactions.length; i++) {
+          console.log(`Processing transaction ${i + 1}/${transactions.length}`);
+          
+          // Clear container
+          tempContainer.innerHTML = '';
+          
+          // Add header to each page
+          tempContainer.appendChild(headerClone.cloneNode(true));
+          
+          // Add a spacer
+          const spacer = document.createElement('div');
+          spacer.style.height = '20px';
+          tempContainer.appendChild(spacer);
+          
+          // Add this transaction with enhanced styling
+          const transaction = transactions[i].cloneNode(true) as HTMLElement;
+          transaction.style.pageBreakInside = 'avoid';
+          transaction.style.border = '1px solid #ddd';
+          transaction.style.padding = '15px';
+          transaction.style.marginBottom = '20px';
+          transaction.style.backgroundColor = '#ffffff';
+          transaction.className = 'transaction-item';
+          
+          // Ensure all table elements have proper display properties
+          const tables = transaction.querySelectorAll('table');
+          tables.forEach(table => {
+            table.style.display = 'table';
+            table.style.width = '100%';
+            table.style.borderCollapse = 'collapse';
+            table.style.marginBottom = '10px';
             
-            // Special handling for table elements
-            if (el.tagName.toLowerCase() === 'table') {
-              el.style.display = 'table';
-            } else if (el.tagName.toLowerCase() === 'tr') {
-              el.style.display = 'table-row';
-            } else if (el.tagName.toLowerCase() === 'td' || el.tagName.toLowerCase() === 'th') {
-              el.style.display = 'table-cell';
-            }
-          }
-        });
-        
-        // Wait for styling to be applied
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Capture this transaction to the PDF
-        await captureElementToPdf(transaction, pdf, i);
+            const rows = table.querySelectorAll('tr');
+            rows.forEach(row => {
+              row.style.display = 'table-row';
+              
+              const cells = row.querySelectorAll('th, td');
+              cells.forEach(cell => {
+                cell.style.display = 'table-cell';
+                cell.style.border = '1px solid #ddd';
+                cell.style.padding = '8px';
+                cell.style.textAlign = 'left';
+              });
+            });
+          });
+          
+          tempContainer.appendChild(transaction);
+          
+          // Add to PDF (add new page if not the first transaction)
+          await processPageToPdf(tempContainer, pdf, i, i === 0);
+        }
       }
     }
     
-    // Clean up - remove the clone
-    document.body.removeChild(clone);
-    
-    // Save the PDF file
-    console.log(`Saving PDF with filename: ${filename}.pdf`);
+    // Save the PDF
     pdf.save(`${filename}.pdf`);
     console.log('PDF saved successfully');
+    
+    // Clean up
+    document.body.removeChild(tempContainer);
+    
   } catch (error) {
-    console.error('Error generating PDF:', error);
+    console.error('PDF generation error:', error);
     throw new Error(`Failed to generate PDF: ${String(error)}`);
   }
 };
 
-// Helper function to capture an element to PDF
-const captureElementToPdf = async (
+// Process a single page/element to PDF
+async function processPageToPdf(
   element: HTMLElement,
   pdf: jsPDF,
-  index: number
-): Promise<void> => {
+  pageIndex: number,
+  isFirstPage: boolean
+): Promise<void> {
   try {
-    console.log(`Capturing element to canvas (index: ${index})...`);
+    // Wait to ensure any rendering/styling is complete
+    await new Promise(resolve => setTimeout(resolve, 500));
     
-    // Use high quality settings for canvas capture
+    // Capture element as image with high quality settings
     const canvas = await html2canvas(element, {
-      scale: 2,
+      scale: 2, // Higher scale for better quality
       useCORS: true,
       allowTaint: true,
-      logging: true,
       backgroundColor: '#ffffff',
+      logging: true,
       onclone: (doc, clone) => {
-        console.log('HTML2Canvas cloning document...');
-        
+        console.log('Cloning document for canvas rendering');
         if (clone instanceof HTMLElement) {
-          // Force display of all elements in clone
-          clone.style.display = 'block';
-          clone.style.visibility = 'visible';
-          
+          // Make sure every element is visible
           const allElements = clone.querySelectorAll('*');
-          allElements.forEach((el: Element) => {
+          allElements.forEach(el => {
             if (el instanceof HTMLElement) {
-              // Special handling for table elements
-              if (el.tagName.toLowerCase() === 'table') {
-                el.style.display = 'table';
-              } else if (el.tagName.toLowerCase() === 'tr') {
-                el.style.display = 'table-row';
-              } else if (el.tagName.toLowerCase() === 'td' || 
-                         el.tagName.toLowerCase() === 'th') {
-                el.style.display = 'table-cell';
-              } else {
-                el.style.display = 'block';
-              }
+              el.style.display = computeProperDisplay(el);
               el.style.visibility = 'visible';
             }
           });
@@ -162,19 +153,19 @@ const captureElementToPdf = async (
       }
     });
     
-    console.log(`Canvas generated: ${canvas.width}x${canvas.height}`);
+    console.log(`Canvas generated with dimensions: ${canvas.width} x ${canvas.height}`);
     
-    // Calculate dimensions (A4 size)
+    // Calculate dimensions (A4 page)
     const imgWidth = 210; // A4 width in mm
+    const pageHeight = 297; // A4 height in mm
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
     
-    // If not first element, add new page
-    if (index > 0) {
+    // Add new page if not the first one
+    if (!isFirstPage) {
       pdf.addPage();
     }
     
-    // Add image to PDF with high quality setting
-    console.log(`Adding image to PDF at index ${index}`);
+    // Add image to PDF
     pdf.addImage(
       canvas.toDataURL('image/jpeg', 1.0),
       'JPEG',
@@ -186,12 +177,28 @@ const captureElementToPdf = async (
       'FAST'
     );
     
-    console.log(`Element ${index} added to PDF successfully`);
+    console.log(`Page ${pageIndex + 1} processed successfully`);
+    
   } catch (error) {
-    console.error(`Error capturing element ${index}:`, error);
+    console.error(`Error processing page ${pageIndex}:`, error);
     throw error;
   }
-};
+}
+
+// Helper function to compute the proper display value for an element
+function computeProperDisplay(el: HTMLElement): string {
+  const tagName = el.tagName.toLowerCase();
+  
+  // Special handling for table elements
+  if (tagName === 'table') return 'table';
+  if (tagName === 'thead') return 'table-header-group';
+  if (tagName === 'tbody') return 'table-row-group';
+  if (tagName === 'tr') return 'table-row';
+  if (tagName === 'td' || tagName === 'th') return 'table-cell';
+  
+  // Default to block for most elements
+  return 'block';
+}
 
 // Fetch customer list data for report
 export const fetchCustomerListData = async () => {
