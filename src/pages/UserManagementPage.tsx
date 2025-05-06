@@ -33,6 +33,8 @@ interface UserProfileWithRole {
   name: string | null;
   role: UserRole;
   created_at: string | null;
+  avatar_url?: string | null;
+  updated_at?: string | null;
 }
 
 const UserManagementPage = () => {
@@ -56,7 +58,13 @@ const UserManagementPage = () => {
         throw error;
       }
 
-      setUsers(data || []);
+      // Cast the role field to UserRole type to fix the TypeScript error
+      const typedData = data?.map(user => ({
+        ...user,
+        role: user.role as UserRole
+      })) || [];
+      
+      setUsers(typedData);
     } catch (error: any) {
       console.error("Error fetching users:", error.message);
       toast.error("Failed to load users");

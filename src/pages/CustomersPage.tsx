@@ -38,7 +38,7 @@ const CustomersPage = () => {
           )}
         </p>
       </div>
-      <SupabaseCustomersTable userRole={userRole} />
+      <SupabaseCustomersTable />
       <Toaster />
     </DashboardLayout>
   );
