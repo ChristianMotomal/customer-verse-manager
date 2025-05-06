@@ -1,6 +1,6 @@
 
 import { Link, useLocation } from "react-router-dom";
-import { Users, LayoutDashboard, User, LogOut, FileText } from "lucide-react";
+import { Users, LayoutDashboard, User, LogOut, FileText, UserCog } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ const Sidebar = () => {
   const location = useLocation();
   const { user, profile, logout } = useAuth();
 
+  // Base navigation items available to all authenticated users
   const navigationItems = [
     {
       name: "Dashboard",
@@ -29,6 +30,20 @@ const Sidebar = () => {
     },
   ];
 
+  // Add admin-only menu items
+  const isAdmin = profile?.role === "admin";
+  
+  // Add the Users management link for admins
+  const allNavigationItems = isAdmin ? 
+    [...navigationItems, 
+      {
+        name: "User Management",
+        href: "/users",
+        icon: UserCog,
+      }
+    ] : 
+    navigationItems;
+
   const handleLogout = () => {
     logout();
   };
@@ -42,7 +57,7 @@ const Sidebar = () => {
 
       <ScrollArea className="flex-1">
         <nav className="px-4 pb-6 space-y-1">
-          {navigationItems.map((item) => (
+          {allNavigationItems.map((item) => (
             <Link
               key={item.name}
               to={item.href}
