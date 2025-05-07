@@ -8,12 +8,15 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 
+// Define the UserRole type that includes "blocked"
+type UserRole = "admin" | "user" | "blocked";
+
 const ReportsPage = () => {
   const [activeTab, setActiveTab] = useState("customer-list");
   const { profile } = useAuth();
   
   // Check if user is blocked
-  if (profile?.role === "blocked") {
+  if (profile?.role === "blocked" as UserRole) {
     return (
       <DashboardLayout>
         <div className="mb-8">
