@@ -38,28 +38,59 @@ const CustomerListReport = () => {
   };
 
   const printReport = async () => {
-    if (!reportRef.current) return;
+    if (!reportRef.current || customers.length === 0) return;
     
     try {
       setIsPrinting(true);
       
-      // Ensure the report container has proper styles for PDF generation
-      const reportContainer = reportRef.current;
-      const originalWidth = reportContainer.style.width;
+      // Create a temporary container that will be used just for PDF generation
+      const printContainer = document.createElement('div');
+      printContainer.style.width = '794px'; // A4 width in pixels
+      printContainer.style.position = 'absolute';
+      printContainer.style.left = '-9999px';
+      printContainer.style.background = '#ffffff';
+      printContainer.style.padding = '20px';
+      document.body.appendChild(printContainer);
       
-      // Set explicit width to ensure all content is captured
-      reportContainer.style.width = '794px'; // A4 width in pixels
+      // Clone the report content into the temporary container
+      printContainer.innerHTML = reportRef.current.innerHTML;
       
-      // Give the browser a moment to adjust the layout
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Apply additional styles for better PDF output
+      const tables = printContainer.querySelectorAll('table');
+      tables.forEach(table => {
+        table.style.width = '100%';
+        table.style.borderCollapse = 'collapse';
+        table.style.marginBottom = '20px';
+      });
       
+      const cells = printContainer.querySelectorAll('th, td');
+      cells.forEach(cell => {
+        if (cell instanceof HTMLElement) {
+          cell.style.border = '1px solid #ddd';
+          cell.style.padding = '8px';
+          cell.style.textAlign = 'left';
+        }
+      });
+      
+      const headers = printContainer.querySelectorAll('th');
+      headers.forEach(header => {
+        if (header instanceof HTMLElement) {
+          header.style.backgroundColor = '#f2f2f2';
+          header.style.fontWeight = 'bold';
+        }
+      });
+      
+      // Wait a moment to ensure all styles are applied
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Generate the PDF from the temporary container
       await generatePdfFromElement(
-        reportContainer, 
+        printContainer,
         `customer-list-${getReportTimestamp()}`
       );
       
-      // Restore original styles
-      reportContainer.style.width = originalWidth;
+      // Clean up
+      document.body.removeChild(printContainer);
       
       toast({
         title: "Success",
@@ -102,7 +133,7 @@ const CustomerListReport = () => {
 
       <Card>
         <CardContent className="p-0">
-          <div ref={reportRef} className="p-6">
+          <div ref={reportRef} className="p-6 min-w-full">
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold">Customer List Report</h2>
               <p className="text-muted-foreground">
