@@ -17,6 +17,7 @@ export type Customer = {
 const CustomerListReport = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -40,10 +41,25 @@ const CustomerListReport = () => {
     if (!reportRef.current) return;
     
     try {
+      setIsPrinting(true);
+      
+      // Ensure the report container has proper styles for PDF generation
+      const reportContainer = reportRef.current;
+      const originalWidth = reportContainer.style.width;
+      
+      // Set explicit width to ensure all content is captured
+      reportContainer.style.width = '794px'; // A4 width in pixels
+      
+      // Give the browser a moment to adjust the layout
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       await generatePdfFromElement(
-        reportRef.current, 
+        reportContainer, 
         `customer-list-${getReportTimestamp()}`
       );
+      
+      // Restore original styles
+      reportContainer.style.width = originalWidth;
       
       toast({
         title: "Success",
@@ -55,6 +71,9 @@ const CustomerListReport = () => {
         description: "Failed to generate PDF",
         variant: "destructive",
       });
+      console.error("PDF generation error:", error);
+    } finally {
+      setIsPrinting(false);
     }
   };
 
@@ -66,17 +85,17 @@ const CustomerListReport = () => {
           <Button 
             variant="outline" 
             onClick={loadReport} 
-            disabled={isLoading}
+            disabled={isLoading || isPrinting}
           >
             {isLoading ? "Loading..." : "Load Data"}
           </Button>
           <Button
             onClick={printReport}
-            disabled={customers.length === 0 || isLoading}
+            disabled={customers.length === 0 || isLoading || isPrinting}
             className="flex items-center gap-2"
           >
             <Printer className="h-4 w-4" />
-            Print to PDF
+            {isPrinting ? "Generating PDF..." : "Print to PDF"}
           </Button>
         </div>
       </div>
@@ -91,13 +110,13 @@ const CustomerListReport = () => {
               </p>
             </div>
 
-            <Table>
+            <Table className="w-full border-collapse">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Customer ID</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Address</TableHead>
-                  <TableHead>Payment Terms</TableHead>
+                  <TableHead className="border border-gray-300 bg-gray-100 font-bold p-2">Customer ID</TableHead>
+                  <TableHead className="border border-gray-300 bg-gray-100 font-bold p-2">Name</TableHead>
+                  <TableHead className="border border-gray-300 bg-gray-100 font-bold p-2">Address</TableHead>
+                  <TableHead className="border border-gray-300 bg-gray-100 font-bold p-2">Payment Terms</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -109,11 +128,11 @@ const CustomerListReport = () => {
                   </TableRow>
                 ) : (
                   customers.map((customer) => (
-                    <TableRow key={customer.custno}>
-                      <TableCell>{customer.custno}</TableCell>
-                      <TableCell>{customer.custname || 'N/A'}</TableCell>
-                      <TableCell>{customer.address || 'N/A'}</TableCell>
-                      <TableCell>{customer.payterm || 'N/A'}</TableCell>
+                    <TableRow key={customer.custno} className="border-b">
+                      <TableCell className="border border-gray-300 p-2">{customer.custno}</TableCell>
+                      <TableCell className="border border-gray-300 p-2">{customer.custname || 'N/A'}</TableCell>
+                      <TableCell className="border border-gray-300 p-2">{customer.address || 'N/A'}</TableCell>
+                      <TableCell className="border border-gray-300 p-2">{customer.payterm || 'N/A'}</TableCell>
                     </TableRow>
                   ))
                 )}
