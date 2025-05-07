@@ -43,106 +43,60 @@ const CustomerListReport = () => {
     try {
       setIsPrinting(true);
       
-      // Create a complete standalone document for PDF generation
-      const printContainer = document.createElement('div');
-      printContainer.style.width = '794px'; // A4 width in pixels
-      printContainer.style.position = 'absolute';
-      printContainer.style.left = '-9999px';
-      printContainer.style.padding = '20px';
-      printContainer.style.backgroundColor = '#ffffff';
-      printContainer.style.overflow = 'visible'; // Ensure nothing is cut off
-      document.body.appendChild(printContainer);
+      // Create the document in memory for PDF generation with jsPDF directly
+      const { jsPDF } = await import('jspdf');
+      const { autoTable } = await import('jspdf-autotable');
       
-      // Create full report content with proper structure
-      const headerDiv = document.createElement('div');
-      headerDiv.style.textAlign = 'center';
-      headerDiv.style.marginBottom = '20px';
-      
-      const title = document.createElement('h2');
-      title.textContent = 'Customer List Report';
-      title.style.fontSize = '24px';
-      title.style.fontWeight = 'bold';
-      title.style.marginBottom = '8px';
-      
-      const dateText = document.createElement('p');
-      dateText.textContent = `Generated on ${new Date().toLocaleDateString()}`;
-      dateText.style.color = '#666';
-      
-      headerDiv.appendChild(title);
-      headerDiv.appendChild(dateText);
-      printContainer.appendChild(headerDiv);
-      
-      // Create table with proper styling for PDF
-      const table = document.createElement('table');
-      table.style.width = '100%';
-      table.style.borderCollapse = 'collapse';
-      table.style.marginBottom = '0';
-      table.style.pageBreakInside = 'auto';
-      
-      // Table header
-      const thead = document.createElement('thead');
-      const headerRow = document.createElement('tr');
-      
-      const headers = ['Customer ID', 'Name', 'Address', 'Payment Terms'];
-      headers.forEach(headerText => {
-        const th = document.createElement('th');
-        th.textContent = headerText;
-        th.style.backgroundColor = '#f2f2f2';
-        th.style.fontWeight = 'bold';
-        th.style.padding = '8px';
-        th.style.border = '1px solid #ddd';
-        th.style.textAlign = 'left';
-        headerRow.appendChild(th);
+      // Create PDF document
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
       });
       
-      thead.appendChild(headerRow);
-      table.appendChild(thead);
+      // Add title
+      const title = 'Customer List Report';
+      const dateText = `Generated on ${new Date().toLocaleDateString()}`;
       
-      // Table body with all customers
-      const tbody = document.createElement('tbody');
+      doc.setFontSize(16);
+      doc.text(title, doc.internal.pageSize.getWidth() / 2, 20, { align: 'center' });
+      doc.setFontSize(10);
+      doc.text(dateText, doc.internal.pageSize.getWidth() / 2, 27, { align: 'center' });
       
-      customers.forEach(customer => {
-        const row = document.createElement('tr');
-        
-        const cellData = [
-          customer.custno, 
-          customer.custname || 'N/A',
-          customer.address || 'N/A',
-          customer.payterm || 'N/A'
-        ];
-        
-        cellData.forEach(text => {
-          const cell = document.createElement('td');
-          cell.textContent = text;
-          cell.style.padding = '8px';
-          cell.style.border = '1px solid #ddd';
-          cell.style.textAlign = 'left';
-          cell.style.maxWidth = '200px'; // Prevent cells from getting too wide
-          cell.style.wordBreak = 'break-word'; // Allow text to wrap
-          row.appendChild(cell);
-        });
-        
-        tbody.appendChild(row);
+      // Convert customers to table data format
+      const tableData = customers.map(customer => [
+        customer.custno,
+        customer.custname || 'N/A',
+        customer.address || 'N/A',
+        customer.payterm || 'N/A'
+      ]);
+      
+      // Add table to PDF using autotable plugin
+      autoTable(doc, {
+        head: [['Customer ID', 'Name', 'Address', 'Payment Terms']],
+        body: tableData,
+        startY: 35,
+        headStyles: { fillColor: [242, 242, 242], textColor: [0, 0, 0], fontStyle: 'bold' },
+        styles: { 
+          overflow: 'linebreak',
+          cellWidth: 'wrap',
+          fontSize: 9
+        },
+        columnStyles: {
+          0: { cellWidth: 25 }, // Customer ID
+          1: { cellWidth: 40 }, // Name
+          2: { cellWidth: 80 }, // Address
+          3: { cellWidth: 30 }  // Payment Terms
+        },
+        margin: { top: 35 }
       });
       
-      table.appendChild(tbody);
-      printContainer.appendChild(table);
-      
-      // Wait to ensure rendering is complete
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Generate the PDF from the fully prepared container
-      await generatePdfFromElement(
-        printContainer,
-        `customer-list-${getReportTimestamp()}`
-      );
-      
-      // Clean up
-      document.body.removeChild(printContainer);
+      // Save the PDF
+      doc.save(`customer-list-${getReportTimestamp()}.pdf`);
       
       toast({
         title: "Success",
-        description: "Customer list PDF generated successfully",
+        description: "Complete customer list PDF generated successfully",
       });
     } catch (error) {
       toast({
