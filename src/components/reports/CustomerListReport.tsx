@@ -43,47 +43,95 @@ const CustomerListReport = () => {
     try {
       setIsPrinting(true);
       
-      // Create a temporary container that will be used just for PDF generation
+      // Create a complete standalone document for PDF generation
       const printContainer = document.createElement('div');
       printContainer.style.width = '794px'; // A4 width in pixels
       printContainer.style.position = 'absolute';
       printContainer.style.left = '-9999px';
-      printContainer.style.background = '#ffffff';
       printContainer.style.padding = '20px';
+      printContainer.style.backgroundColor = '#ffffff';
+      printContainer.style.overflow = 'visible'; // Ensure nothing is cut off
       document.body.appendChild(printContainer);
       
-      // Clone the report content into the temporary container
-      printContainer.innerHTML = reportRef.current.innerHTML;
+      // Create full report content with proper structure
+      const headerDiv = document.createElement('div');
+      headerDiv.style.textAlign = 'center';
+      headerDiv.style.marginBottom = '20px';
       
-      // Apply additional styles for better PDF output
-      const tables = printContainer.querySelectorAll('table');
-      tables.forEach(table => {
-        table.style.width = '100%';
-        table.style.borderCollapse = 'collapse';
-        table.style.marginBottom = '20px';
+      const title = document.createElement('h2');
+      title.textContent = 'Customer List Report';
+      title.style.fontSize = '24px';
+      title.style.fontWeight = 'bold';
+      title.style.marginBottom = '8px';
+      
+      const dateText = document.createElement('p');
+      dateText.textContent = `Generated on ${new Date().toLocaleDateString()}`;
+      dateText.style.color = '#666';
+      
+      headerDiv.appendChild(title);
+      headerDiv.appendChild(dateText);
+      printContainer.appendChild(headerDiv);
+      
+      // Create table with proper styling for PDF
+      const table = document.createElement('table');
+      table.style.width = '100%';
+      table.style.borderCollapse = 'collapse';
+      table.style.marginBottom = '0';
+      table.style.pageBreakInside = 'auto';
+      
+      // Table header
+      const thead = document.createElement('thead');
+      const headerRow = document.createElement('tr');
+      
+      const headers = ['Customer ID', 'Name', 'Address', 'Payment Terms'];
+      headers.forEach(headerText => {
+        const th = document.createElement('th');
+        th.textContent = headerText;
+        th.style.backgroundColor = '#f2f2f2';
+        th.style.fontWeight = 'bold';
+        th.style.padding = '8px';
+        th.style.border = '1px solid #ddd';
+        th.style.textAlign = 'left';
+        headerRow.appendChild(th);
       });
       
-      const cells = printContainer.querySelectorAll('th, td');
-      cells.forEach(cell => {
-        if (cell instanceof HTMLElement) {
-          cell.style.border = '1px solid #ddd';
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
+      
+      // Table body with all customers
+      const tbody = document.createElement('tbody');
+      
+      customers.forEach(customer => {
+        const row = document.createElement('tr');
+        
+        const cellData = [
+          customer.custno, 
+          customer.custname || 'N/A',
+          customer.address || 'N/A',
+          customer.payterm || 'N/A'
+        ];
+        
+        cellData.forEach(text => {
+          const cell = document.createElement('td');
+          cell.textContent = text;
           cell.style.padding = '8px';
+          cell.style.border = '1px solid #ddd';
           cell.style.textAlign = 'left';
-        }
+          cell.style.maxWidth = '200px'; // Prevent cells from getting too wide
+          cell.style.wordBreak = 'break-word'; // Allow text to wrap
+          row.appendChild(cell);
+        });
+        
+        tbody.appendChild(row);
       });
       
-      const headers = printContainer.querySelectorAll('th');
-      headers.forEach(header => {
-        if (header instanceof HTMLElement) {
-          header.style.backgroundColor = '#f2f2f2';
-          header.style.fontWeight = 'bold';
-        }
-      });
+      table.appendChild(tbody);
+      printContainer.appendChild(table);
       
-      // Wait a moment to ensure all styles are applied
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // Wait to ensure rendering is complete
+      await new Promise(resolve => setTimeout(resolve, 300));
       
-      // Generate the PDF from the temporary container
+      // Generate the PDF from the fully prepared container
       await generatePdfFromElement(
         printContainer,
         `customer-list-${getReportTimestamp()}`
